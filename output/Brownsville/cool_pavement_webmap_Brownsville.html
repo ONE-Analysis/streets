@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    
+        <script>
+            L_NO_TOUCH = false;
+            L_DISABLE_3D = false;
+        </script>
+    
+    <style>html, body {width: 100%;height: 100%;margin: 0;padding: 0;}</style>
+    <style>#map {position:absolute;top:0;bottom:0;right:0;left:0;}</style>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_19a419b9a1f797c75c260c67cb9fcef8 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+        
+    
+                    <style>
+                        .foliumtooltip {
+                            
+                    background-color: white;
+                    border: 2px solid black;
+                    border-radius: 3px;
+                    box-shadow: 3px;
+                
+                        }
+                       .foliumtooltip table{
+                            margin: auto;
+                        }
+                        .foliumtooltip tr{
+                            text-align: left;
+                        }
+                        .foliumtooltip th{
+                            padding: 2px; padding-right: 8px;
+                        }
+                    </style>
+            
+</head>
+<body>
+    
+    
+    <div style="position: fixed; bottom: 50px; right: 50px; 
+                background: white; padding: 10px; border: 2px solid grey;">
+        <h4>Priority Score</h4>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+    
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #CC0000;"></div>
+                <span>1.0</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #E63900;"></div>
+                <span>0.83</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #FF4D00;"></div>
+                <span>0.67</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #FF6B1A;"></div>
+                <span>0.5</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #FF8533;"></div>
+                <span>0.33</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #FF9940;"></div>
+                <span>0.17</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #FFB366;"></div>
+                <span>0.0</span>
+            </div>
+        </div></div>
+    
+            <div class="folium-map" id="map_19a419b9a1f797c75c260c67cb9fcef8" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_19a419b9a1f797c75c260c67cb9fcef8 = L.map(
+                "map_19a419b9a1f797c75c260c67cb9fcef8",
+                {
+                    center: [40.663353753974384, -73.91158430106552],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 14,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_9e99a7b6c02e7effc349f20155ec74b9 = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors \u0026copy; \u003ca href=\"https://carto.com/attributions\"\u003eCARTO\u003c/a\u003e",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_9e99a7b6c02e7effc349f20155ec74b9.addTo(map_19a419b9a1f797c75c260c67cb9fcef8);
+        
+    
+        function geo_json_cc0b5aff901c3b75d0faf467577446af_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "gray", "fillOpacity": 0.1, "weight": 1};
+            }
+        }
+
+        function geo_json_cc0b5aff901c3b75d0faf467577446af_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_cc0b5aff901c3b75d0faf467577446af = L.geoJson(null, {
+                onEachFeature: geo_json_cc0b5aff901c3b75d0faf467577446af_onEachFeature,
+            
+                style: geo_json_cc0b5aff901c3b75d0faf467577446af_styler,
+            ...{
+}
+        });
+
+        function geo_json_cc0b5aff901c3b75d0faf467577446af_add (data) {
+            geo_json_cc0b5aff901c3b75d0faf467577446af
+                .addData(data);
+        }
+            geo_json_cc0b5aff901c3b75d0faf467577446af_add({"bbox": [-73.92439241316511, 40.65119257226898, -73.89877618896594, 40.675514935679786], "features": [{"bbox": [-73.92439241316511, 40.65119257226898, -73.89877618896594, 40.675514935679786], "geometry": {"coordinates": [[[-73.90085276747499, 40.66535414497831], [-73.90126711626372, 40.66688890146532], [-73.90166909026857, 40.66842178061945], [-73.9019835940622, 40.669678323229874], [-73.90228963844095, 40.670944258985934], [-73.90266149636682, 40.67220543076553], [-73.90296910298395, 40.67344764784746], [-73.90322273243919, 40.67448116634265], [-73.90344413689957, 40.67538617154418], [-73.90346370139657, 40.67546617265406], [-73.90347563724842, 40.675514935679786], [-73.90374516025953, 40.675415087178536], [-73.90428928039196, 40.675237608220684], [-73.9043893415567, 40.67521499932132], [-73.90451053749102, 40.67506036347562], [-73.90524154227973, 40.67473319906856], [-73.90582768233214, 40.67447790595552], [-73.90609580206306, 40.674361185035345], [-73.90629803564879, 40.67427358565725], [-73.90695796835362, 40.673993511530036], [-73.90746984438726, 40.67376986612237], [-73.90787852966457, 40.673575061323305], [-73.90827942465701, 40.673387645696], [-73.90833095687498, 40.67336355474498], [-73.90842073045157, 40.67332158475903], [-73.90924144635316, 40.67296252858051], [-73.90946322505903, 40.67287020323452], [-73.90989974918944, 40.67268912079835], [-73.90995974499192, 40.672664233384786], [-73.9101440657185, 40.672587770607315], [-73.91019428652328, 40.67256693676284], [-73.91037615473033, 40.67249149018214], [-73.91046446865822, 40.67245485391865], [-73.91104772653038, 40.672212894684996], [-73.9111000886865, 40.67219117149001], [-73.91116137160189, 40.67216360270744], [-73.91133675260123, 40.67208470602427], [-73.91221918437498, 40.67169541428286], [-73.91308716305966, 40.671318477933994], [-73.91403998810291, 40.67090509153527], [-73.9145462727878, 40.67068372474548], [-73.91461999492373, 40.67065148967848], [-73.91487388068364, 40.67054047939737], [-73.91553564260195, 40.67025163495447], [-73.91558608972102, 40.67022961474076], [-73.91573016161246, 40.670166729264906], [-73.9158050359959, 40.67013427905799], [-73.91586354834574, 40.67010892010801], [-73.91647305180997, 40.66984476110595], [-73.91652437850945, 40.66982251508926], [-73.91658601783455, 40.669795800962405], [-73.91713730846452, 40.6695520145153], [-73.917484078361, 40.669400481769884], [-73.91838333039097, 40.66901049826266], [-73.9192320479648, 40.6686396163218], [-73.91941905196252, 40.66840529447496], [-73.91995719150924, 40.66832757107724], [-73.92004895786683, 40.668284680265856], [-73.92015006010172, 40.668237734533314], [-73.92102130743758, 40.66786094852143], [-73.92187313100845, 40.66748894156308], [-73.92221705972382, 40.66734169706719], [-73.92275399188466, 40.667105583272956], [-73.92281248498675, 40.66708001095001], [-73.92303581262081, 40.66698237621236], [-73.92312120500121, 40.666945043872325], [-73.92323366475817, 40.6668958787392], [-73.92331181676899, 40.66686171034261], [-73.92424609210387, 40.6664532508982], [-73.92439241316511, 40.66638967344704], [-73.92434232918849, 40.666317700071666], [-73.92428773380568, 40.666247655312326], [-73.92422875574736, 40.66617970134044], [-73.92416553202347, 40.66611399763102], [-73.92409821147542, 40.6660506973631], [-73.92402695240749, 40.66598995011978], [-73.9231835815838, 40.66523427013186], [-73.92288002072311, 40.66496034874684], [-73.92210044403117, 40.66425958183851], [-73.92165713480347, 40.6638518249488], [-73.91818634792315, 40.660734458219125], [-73.9174196091031, 40.66005944110212], [-73.91707505136982, 40.659753602759416], [-73.91572945417253, 40.65855837699644], [-73.9155677125978, 40.658400820960686], [-73.91441389220869, 40.657370667958304], [-73.91403019637151, 40.657011957895364], [-73.91378085263013, 40.65679192794813], [-73.91314497726437, 40.6562291124204], [-73.91236600356142, 40.65552181342077], [-73.90933640685688, 40.65281684045633], [-73.90755201149231, 40.65119257226898], [-73.90743612636822, 40.65128662732781], [-73.90328223008567, 40.65400189917438], [-73.90180177606003, 40.65501600830752], [-73.9010040559456, 40.655588482422566], [-73.90049380321757, 40.65617185494852], [-73.90016321603369, 40.656640730063266], [-73.89989128027497, 40.65728276985927], [-73.89968689111949, 40.65730618625491], [-73.89948250301792, 40.65732959238264], [-73.89904321475062, 40.65737990680151], [-73.89877618896594, 40.657447626080554], [-73.89921901886535, 40.659119654451196], [-73.89965374476192, 40.660743666233365], [-73.90041795295599, 40.663814778155825], [-73.90085276747499, 40.66535414497831]]], "type": "Polygon"}, "id": "2", "properties": {"Name": "Brownsville", "OBJECTID": 3, "Shape_Area": 33405362.42450308, "Shape_Length": 24109.644750501186, "Year": "Year 1"}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+            geo_json_cc0b5aff901c3b75d0faf467577446af.addTo(map_19a419b9a1f797c75c260c67cb9fcef8);
+        
+    
+        function geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40_styler(feature) {
+            switch(feature.id) {
+                case "0": 
+                    return {"color": "#FFB366", "opacity": 0.8, "weight": 3};
+                case "1": case "2": 
+                    return {"color": "#CC0000", "opacity": 0.8, "weight": 3};
+                case "3": 
+                    return {"color": "#FF6B1A", "opacity": 0.8, "weight": 3};
+                case "4": 
+                    return {"color": "#FF4D00", "opacity": 0.8, "weight": 3};
+                default:
+                    return {"color": "#FF9940", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40 = L.geoJson(null, {
+                onEachFeature: geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40_onEachFeature,
+            
+                style: geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40_styler,
+            ...{
+}
+        });
+
+        function geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40_add (data) {
+            geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40
+                .addData(data);
+        }
+            geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40_add({"bbox": [-73.9243874077315, 40.66351634454606, -73.90237559827436, 40.67356624333812], "features": [{"bbox": [-73.90930550012762, 40.6640970353968, -73.90564027204674, 40.664649031961225], "geometry": {"coordinates": [[-73.90930550012762, 40.6640970353968], [-73.90903664907725, 40.664137760364774], [-73.90895109343072, 40.664150720313664], [-73.90865512965007, 40.66419555101625], [-73.90857556436299, 40.6642076030909], [-73.90848722815723, 40.664220983174836], [-73.90838617036921, 40.66423629029765], [-73.90829744616023, 40.664249729213246], [-73.90814866026527, 40.66427226559234], [-73.90802173742158, 40.66429145311261], [-73.90794335158337, 40.664303303130936], [-73.90765140068362, 40.664347438944375], [-73.90753959737732, 40.664364340173265], [-73.90746224333529, 40.66437593598005], [-73.90731430011425, 40.66439811239413], [-73.90704703715075, 40.664438174151385], [-73.90692055951295, 40.66445713245214], [-73.90621682867975, 40.66456261542357], [-73.9060911480618, 40.664581453242704], [-73.90591095091865, 40.664608461901906], [-73.90581847351415, 40.66462232291556], [-73.90564027204674, 40.664649031961225]], "type": "LineString"}, "id": "0", "properties": {"BikeLnIndx": 0.0, "BusDensInx": 0.0, "BusStpDens": 35.65712546334801, "Street": "DUMONT AVENUE", "StreetCode": "334330", "bike_length": 59.98114098089615, "heat_indx": 0.5494439872526778, "heat_mean": 106.04285631883367, "hvi_raw": 5.000000000000001, "is_priority": true, "pav_rate": 7.000000000000001, "pave_indx": 0.3453577963084697, "pop_dens_indx": 0.37333989221477676, "pop_density": 79841.02298046493, "priority": 0.2525677015692703, "tree_indx": 0.8964941396081512, "tree_pct": 9.995967992825497, "vuln_indx": 2.196323189456505e-16}, "type": "Feature"}, {"bbox": [-73.9243874077315, 40.66638248037704, -73.9199558149478, 40.6683187891291], "geometry": {"coordinates": [[-73.9243874077315, 40.66638248037704], [-73.92424471342129, 40.66644448077059], [-73.92331043830745, 40.66685293869548], [-73.92323228670153, 40.666887105776915], [-73.92311982583212, 40.66693627140816], [-73.92303443437022, 40.66697360289161], [-73.92281110667486, 40.667071237007924], [-73.9227526128715, 40.66709680910716], [-73.92221568228196, 40.667332921076834], [-73.92187175281362, 40.66748016481268], [-73.92101992952264, 40.667852168751175], [-73.9201486834758, 40.668228953187324], [-73.92004758105418, 40.66827589852816], [-73.9199558149478, 40.6683187891291]], "type": "LineString"}, "id": "1", "properties": {"BikeLnIndx": 1.0, "BusDensInx": 0.0, "BusStpDens": 59.599760854712926, "Street": "EAST NEW YORK AVENUE", "StreetCode": "338330", "bike_length": 3870.836350256983, "heat_indx": 0.6325056729323578, "heat_mean": 109.4569313833241, "hvi_raw": 4.989828101962885, "is_priority": true, "pav_rate": 5.9102879967567725, "pave_indx": 0.4544124448048031, "pop_dens_indx": 0.2278249408478747, "pop_density": 48721.75922548863, "priority": 0.399787921526515, "tree_indx": 0.961416221384334, "tree_pct": 3.726187238329865, "vuln_indx": 0.0020343796074226905}, "type": "Feature"}, {"bbox": [-73.91109871581462, 40.672182362479546, -73.90787715839201, 40.67356624333812], "geometry": {"coordinates": [[-73.91109871581462, 40.672182362479546], [-73.91104635307349, 40.67220408519687], [-73.91046309551201, 40.672446043523045], [-73.91037478163327, 40.67248267931757], [-73.91019291335682, 40.67255812540171], [-73.91014269329632, 40.67257895925452], [-73.90995837174091, 40.67265542053323], [-73.90989837729283, 40.67268030859724], [-73.90946185365128, 40.67286139004911], [-73.90924007328637, 40.67295371421671], [-73.90841935895645, 40.673312768367175], [-73.9083295840842, 40.673354737807294], [-73.90827805334033, 40.67337882811568], [-73.90787715839201, 40.67356624333812]], "type": "LineString"}, "id": "2", "properties": {"BikeLnIndx": 1.0, "BusDensInx": 0.0, "BusStpDens": 82.31893840776313, "Street": "EAST NEW YORK AVENUE", "StreetCode": "338330", "bike_length": 3870.836350256983, "heat_indx": 0.6325056729323578, "heat_mean": 109.4569313833241, "hvi_raw": 4.989828101962885, "is_priority": true, "pav_rate": 5.9102879967567725, "pave_indx": 0.4544124448048031, "pop_dens_indx": 0.2278249408478747, "pop_density": 48721.75922548863, "priority": 0.399787921526515, "tree_indx": 0.961416221384334, "tree_pct": 3.726187238329865, "vuln_indx": 0.0020343796074226905}, "type": "Feature"}, {"bbox": [-73.90357329656516, 40.66351634454606, -73.90237559827436, 40.66812697315988], "geometry": {"coordinates": [[-73.90357329656516, 40.66812697315988], [-73.90319083737545, 40.66659102212513], [-73.90309642443498, 40.66622008049542], [-73.90307960699992, 40.66615400591494], [-73.90291661774795, 40.665513618473426], [-73.90288942557932, 40.66540677903864], [-73.90280184495722, 40.665062664547435], [-73.90274888045222, 40.664870526144576], [-73.90270314827347, 40.66470462345142], [-73.90269072798692, 40.66465956734097], [-73.90267238299951, 40.66459301627275], [-73.90259292815227, 40.66430477505834], [-73.90256903804628, 40.66421810995263], [-73.90237559827436, 40.66351634454606]], "type": "LineString"}, "id": "3", "properties": {"BikeLnIndx": 0.5904370419650334, "BusDensInx": 0.0, "BusStpDens": 12.333613724159889, "Street": "POWELL STREET", "StreetCode": "372030", "bike_length": 2310.0512181029076, "heat_indx": 0.6035891383962432, "heat_mean": 108.2683783374355, "hvi_raw": 5.0, "is_priority": true, "pav_rate": 7.364605701786604, "pave_indx": 0.2928215886903773, "pop_dens_indx": 0.26745275404600966, "pop_density": 57196.4098326027, "priority": 0.3304936831001202, "tree_indx": 0.935845671319724, "tree_pct": 6.195635818701369, "vuln_indx": 2.220446049250313e-16}, "type": "Feature"}, {"bbox": [-73.90787715839201, 40.667286344153396, -73.90624890256026, 40.67356624333812], "geometry": {"coordinates": [[-73.90787715839201, 40.67356624333812], [-73.90776137932052, 40.67313659865681], [-73.90774733509366, 40.67308448338314], [-73.90766948505441, 40.67279558606383], [-73.90765586992357, 40.67274505869751], [-73.907608834968, 40.67256227563424], [-73.90759508266437, 40.67250883182952], [-73.90755105564698, 40.67233773564976], [-73.90753535287101, 40.67227671167758], [-73.90748063899015, 40.672064084505145], [-73.90746461149044, 40.67200179821361], [-73.90733683860431, 40.671505244212064], [-73.90706069216824, 40.67047309878637], [-73.90704209302947, 40.67040357841631], [-73.90699849364658, 40.67024061343863], [-73.90667395364135, 40.6689739928548], [-73.90635512684342, 40.66770734040978], [-73.90624890256026, 40.667286344153396]], "type": "LineString"}, "id": "4", "properties": {"BikeLnIndx": 0.8333731001402394, "BusDensInx": 0.030105571343843292, "BusStpDens": 13.584101766389576, "Street": "MOTHER GASTON BOULEVARD", "StreetCode": "382230", "bike_length": 3235.8453609208896, "heat_indx": 0.645502983160341, "heat_mean": 109.99115835442036, "hvi_raw": 5.0, "is_priority": true, "pav_rate": 7.829931918399998, "pave_indx": 0.2411186757333336, "pop_dens_indx": 0.2650729055824666, "pop_density": 56687.46466004006, "priority": 0.3737990521126395, "tree_indx": 0.9623019088299516, "tree_pct": 3.6406529185867664, "vuln_indx": 2.220446049250313e-16}, "type": "Feature"}, {"bbox": [-73.91009074360443, 40.66715376486237, -73.90357329656516, 40.66812697315988], "geometry": {"coordinates": [[-73.91009074360443, 40.66715376486237], [-73.90959325870011, 40.66722617694406], [-73.90951541831173, 40.6672375069546], [-73.90944042543562, 40.66724842277737], [-73.90936553637088, 40.66725932298806], [-73.90910665669074, 40.667297002976944], [-73.90903253114003, 40.6673077921378], [-73.90870219198196, 40.66735587241233], [-73.90861374851387, 40.66736874527212], [-73.90830684464312, 40.66741341292731], [-73.90823170859836, 40.6674243478847], [-73.90807324594263, 40.66744824579217], [-73.90720538372167, 40.66757912411177], [-73.90709087157016, 40.667596392707345], [-73.90692784358593, 40.66762097729867], [-73.90635512684342, 40.66770734040978], [-73.90616504156256, 40.66773615706218], [-73.90557718491873, 40.667825273672236], [-73.90538646295764, 40.66785418540497], [-73.9050262620463, 40.667906560109955], [-73.90495488866296, 40.667916937753844], [-73.9047873210809, 40.66794130200949], [-73.90475329232814, 40.66794625004975], [-73.90446426856498, 40.66798827331035], [-73.90423813680604, 40.668023476519714], [-73.90392119694141, 40.66807281574246], [-73.90357329656516, 40.66812697315988]], "type": "LineString"}, "id": "5", "properties": {"BikeLnIndx": 0.43448437609499996, "BusDensInx": 0.0, "BusStpDens": 0.0, "Street": "SUTTER AVENUE", "StreetCode": "383730", "bike_length": 1715.738188971597, "heat_indx": 0.5748081535132266, "heat_mean": 107.0853967735949, "hvi_raw": 5.0, "is_priority": true, "pav_rate": 8.62522329270162, "pave_indx": 0.15275296747759798, "pop_dens_indx": 0.2995628046541767, "pop_density": 64063.34085704222, "priority": 0.2974278384960703, "tree_indx": 0.8984155650490694, "tree_pct": 9.810408381656504, "vuln_indx": 2.1996476002064825e-16}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+    geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40.bindTooltip(
+    function(layer){
+    let div = L.DomUtil.create('div');
+    
+    let handleObject = feature=>typeof(feature)=='object' ? JSON.stringify(feature) : feature;
+    let fields = ["priority"];
+    let aliases = ["Priority Score:"];
+    let table = '<table>' +
+        String(
+        fields.map(
+        (v,i)=>
+        `<tr>
+            <th>${aliases[i]}</th>
+            
+            <td>${handleObject(layer.feature.properties[v])}</td>
+        </tr>`).join(''))
+    +'</table>';
+    div.innerHTML=table;
+    
+    return div
+    }
+    ,{
+  "sticky": false,
+  "className": "foliumtooltip",
+});
+                     
+    
+        function geo_json_db7e125eb60d715ce794742f09371bbd_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "#FFB366", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_db7e125eb60d715ce794742f09371bbd_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_db7e125eb60d715ce794742f09371bbd = L.geoJson(null, {
+                onEachFeature: geo_json_db7e125eb60d715ce794742f09371bbd_onEachFeature,
+            
+                style: geo_json_db7e125eb60d715ce794742f09371bbd_styler,
+            ...{
+}
+        });
+
+        function geo_json_db7e125eb60d715ce794742f09371bbd_add (data) {
+            geo_json_db7e125eb60d715ce794742f09371bbd
+                .addData(data);
+        }
+            geo_json_db7e125eb60d715ce794742f09371bbd_add({"features": [{"bbox": [-73.90930550012762, 40.6640970353968, -73.90564027204674, 40.664649031961225], "geometry": {"coordinates": [[-73.90930550012762, 40.6640970353968], [-73.90903664907725, 40.664137760364774], [-73.90895109343072, 40.664150720313664], [-73.90865512965007, 40.66419555101625], [-73.90857556436299, 40.6642076030909], [-73.90848722815723, 40.664220983174836], [-73.90838617036921, 40.66423629029765], [-73.90829744616023, 40.664249729213246], [-73.90814866026527, 40.66427226559234], [-73.90802173742158, 40.66429145311261], [-73.90794335158337, 40.664303303130936], [-73.90765140068362, 40.664347438944375], [-73.90753959737732, 40.664364340173265], [-73.90746224333529, 40.66437593598005], [-73.90731430011425, 40.66439811239413], [-73.90704703715075, 40.664438174151385], [-73.90692055951295, 40.66445713245214], [-73.90621682867975, 40.66456261542357], [-73.9060911480618, 40.664581453242704], [-73.90591095091865, 40.664608461901906], [-73.90581847351415, 40.66462232291556], [-73.90564027204674, 40.664649031961225]], "type": "LineString"}, "id": "0", "properties": {"BikeLnIndx": 0.0, "BusDensInx": 0.0, "BusStpDens": 35.65712546334801, "Street": "DUMONT AVENUE", "StreetCode": "334330", "bike_length": 59.98114098089615, "heat_indx": 0.5494439872526778, "heat_mean": 106.04285631883367, "hvi_raw": 5.000000000000001, "is_priority": true, "pav_rate": 7.000000000000001, "pave_indx": 0.3453577963084697, "pop_dens_indx": 0.37333989221477676, "pop_density": 79841.02298046493, "priority": 0.2525677015692703, "tree_indx": 0.8964941396081512, "tree_pct": 9.995967992825497, "vuln_indx": 2.196323189456505e-16}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+        var popup_f847bcf4bc66ebcca01a9d463b8724da = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_518dac8dd2a7f5ebd82d6f71648e5de5 = $(`<div id="html_518dac8dd2a7f5ebd82d6f71648e5de5" style="width: 100.0%; height: 100.0%;">             <div style="font-family: Arial; min-width: 200px; max-width: 300px;">                 <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">                     DUMONT AVENUE                 </h4>                  <div style="margin-bottom: 10px;">                     <b>Raw Values</b><br>                     • Pavement Rating: 7.0<br>                     • Average Summer Heat: 106.0 (°F)<br>                     • Tree Canopy: 10.0%<br>                     • Heat Vulnerability Index Average: 5.00<br>                     • Bus Stop Density: 35.657 Stops per Mile<br>                     • Bike Lane: 59.981 ft of Bike Lane Nearby<br>                     • Pop. Density: 79,841 People per sq mi                 </div>                  <div style="margin-bottom: 10px;">                     <b>Index Values</b><br>                     • Pavement: 0.345<br>                     • Heat: 0.549<br>                     • Tree Canopy: 0.896<br>                     • Heat Vulnerability: 0.000<br>                     • Bus Stop Density: 0.000<br>                     • Bike Lanes: 0.000<br>                     • Pop. Density: 0.373                 </div>                  <div style="font-weight: bold; color: #CC0000;">                     Priority Score: 0.253                 </div>             </div>             </div>`)[0];
+                popup_f847bcf4bc66ebcca01a9d463b8724da.setContent(html_518dac8dd2a7f5ebd82d6f71648e5de5);
+            
+        
+
+        geo_json_db7e125eb60d715ce794742f09371bbd.bindPopup(popup_f847bcf4bc66ebcca01a9d463b8724da)
+        ;
+
+        
+    
+    
+            geo_json_db7e125eb60d715ce794742f09371bbd.addTo(geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40);
+        
+    
+        function geo_json_bf457310b7dae77cd3c223d9acb6fbc8_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "#CC0000", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_bf457310b7dae77cd3c223d9acb6fbc8_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_bf457310b7dae77cd3c223d9acb6fbc8 = L.geoJson(null, {
+                onEachFeature: geo_json_bf457310b7dae77cd3c223d9acb6fbc8_onEachFeature,
+            
+                style: geo_json_bf457310b7dae77cd3c223d9acb6fbc8_styler,
+            ...{
+}
+        });
+
+        function geo_json_bf457310b7dae77cd3c223d9acb6fbc8_add (data) {
+            geo_json_bf457310b7dae77cd3c223d9acb6fbc8
+                .addData(data);
+        }
+            geo_json_bf457310b7dae77cd3c223d9acb6fbc8_add({"features": [{"bbox": [-73.9243874077315, 40.66638248037704, -73.9199558149478, 40.6683187891291], "geometry": {"coordinates": [[-73.9243874077315, 40.66638248037704], [-73.92424471342129, 40.66644448077059], [-73.92331043830745, 40.66685293869548], [-73.92323228670153, 40.666887105776915], [-73.92311982583212, 40.66693627140816], [-73.92303443437022, 40.66697360289161], [-73.92281110667486, 40.667071237007924], [-73.9227526128715, 40.66709680910716], [-73.92221568228196, 40.667332921076834], [-73.92187175281362, 40.66748016481268], [-73.92101992952264, 40.667852168751175], [-73.9201486834758, 40.668228953187324], [-73.92004758105418, 40.66827589852816], [-73.9199558149478, 40.6683187891291]], "type": "LineString"}, "id": "1", "properties": {"BikeLnIndx": 1.0, "BusDensInx": 0.0, "BusStpDens": 59.599760854712926, "Street": "EAST NEW YORK AVENUE", "StreetCode": "338330", "bike_length": 3870.836350256983, "heat_indx": 0.6325056729323578, "heat_mean": 109.4569313833241, "hvi_raw": 4.989828101962885, "is_priority": true, "pav_rate": 5.9102879967567725, "pave_indx": 0.4544124448048031, "pop_dens_indx": 0.2278249408478747, "pop_density": 48721.75922548863, "priority": 0.399787921526515, "tree_indx": 0.961416221384334, "tree_pct": 3.726187238329865, "vuln_indx": 0.0020343796074226905}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+        var popup_fdf4520d1ecd4d29f3ebf5a5e6e2dea3 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_c059d59eea092eefeb50d313d479337c = $(`<div id="html_c059d59eea092eefeb50d313d479337c" style="width: 100.0%; height: 100.0%;">             <div style="font-family: Arial; min-width: 200px; max-width: 300px;">                 <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">                     EAST NEW YORK AVENUE                 </h4>                  <div style="margin-bottom: 10px;">                     <b>Raw Values</b><br>                     • Pavement Rating: 5.9<br>                     • Average Summer Heat: 109.5 (°F)<br>                     • Tree Canopy: 3.7%<br>                     • Heat Vulnerability Index Average: 4.99<br>                     • Bus Stop Density: 59.600 Stops per Mile<br>                     • Bike Lane: 3,870.836 ft of Bike Lane Nearby<br>                     • Pop. Density: 48,722 People per sq mi                 </div>                  <div style="margin-bottom: 10px;">                     <b>Index Values</b><br>                     • Pavement: 0.454<br>                     • Heat: 0.633<br>                     • Tree Canopy: 0.961<br>                     • Heat Vulnerability: 0.002<br>                     • Bus Stop Density: 0.000<br>                     • Bike Lanes: 1.000<br>                     • Pop. Density: 0.228                 </div>                  <div style="font-weight: bold; color: #CC0000;">                     Priority Score: 0.400                 </div>             </div>             </div>`)[0];
+                popup_fdf4520d1ecd4d29f3ebf5a5e6e2dea3.setContent(html_c059d59eea092eefeb50d313d479337c);
+            
+        
+
+        geo_json_bf457310b7dae77cd3c223d9acb6fbc8.bindPopup(popup_fdf4520d1ecd4d29f3ebf5a5e6e2dea3)
+        ;
+
+        
+    
+    
+            geo_json_bf457310b7dae77cd3c223d9acb6fbc8.addTo(geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40);
+        
+    
+        function geo_json_9b62d3aa70f6ac05985faef2508047b0_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "#CC0000", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_9b62d3aa70f6ac05985faef2508047b0_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_9b62d3aa70f6ac05985faef2508047b0 = L.geoJson(null, {
+                onEachFeature: geo_json_9b62d3aa70f6ac05985faef2508047b0_onEachFeature,
+            
+                style: geo_json_9b62d3aa70f6ac05985faef2508047b0_styler,
+            ...{
+}
+        });
+
+        function geo_json_9b62d3aa70f6ac05985faef2508047b0_add (data) {
+            geo_json_9b62d3aa70f6ac05985faef2508047b0
+                .addData(data);
+        }
+            geo_json_9b62d3aa70f6ac05985faef2508047b0_add({"features": [{"bbox": [-73.91109871581462, 40.672182362479546, -73.90787715839201, 40.67356624333812], "geometry": {"coordinates": [[-73.91109871581462, 40.672182362479546], [-73.91104635307349, 40.67220408519687], [-73.91046309551201, 40.672446043523045], [-73.91037478163327, 40.67248267931757], [-73.91019291335682, 40.67255812540171], [-73.91014269329632, 40.67257895925452], [-73.90995837174091, 40.67265542053323], [-73.90989837729283, 40.67268030859724], [-73.90946185365128, 40.67286139004911], [-73.90924007328637, 40.67295371421671], [-73.90841935895645, 40.673312768367175], [-73.9083295840842, 40.673354737807294], [-73.90827805334033, 40.67337882811568], [-73.90787715839201, 40.67356624333812]], "type": "LineString"}, "id": "2", "properties": {"BikeLnIndx": 1.0, "BusDensInx": 0.0, "BusStpDens": 82.31893840776313, "Street": "EAST NEW YORK AVENUE", "StreetCode": "338330", "bike_length": 3870.836350256983, "heat_indx": 0.6325056729323578, "heat_mean": 109.4569313833241, "hvi_raw": 4.989828101962885, "is_priority": true, "pav_rate": 5.9102879967567725, "pave_indx": 0.4544124448048031, "pop_dens_indx": 0.2278249408478747, "pop_density": 48721.75922548863, "priority": 0.399787921526515, "tree_indx": 0.961416221384334, "tree_pct": 3.726187238329865, "vuln_indx": 0.0020343796074226905}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+        var popup_8b5567ce7781dad39eb59c5d5b7e1a58 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_85bd75f543405536f75e64f09b7135ab = $(`<div id="html_85bd75f543405536f75e64f09b7135ab" style="width: 100.0%; height: 100.0%;">             <div style="font-family: Arial; min-width: 200px; max-width: 300px;">                 <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">                     EAST NEW YORK AVENUE                 </h4>                  <div style="margin-bottom: 10px;">                     <b>Raw Values</b><br>                     • Pavement Rating: 5.9<br>                     • Average Summer Heat: 109.5 (°F)<br>                     • Tree Canopy: 3.7%<br>                     • Heat Vulnerability Index Average: 4.99<br>                     • Bus Stop Density: 82.319 Stops per Mile<br>                     • Bike Lane: 3,870.836 ft of Bike Lane Nearby<br>                     • Pop. Density: 48,722 People per sq mi                 </div>                  <div style="margin-bottom: 10px;">                     <b>Index Values</b><br>                     • Pavement: 0.454<br>                     • Heat: 0.633<br>                     • Tree Canopy: 0.961<br>                     • Heat Vulnerability: 0.002<br>                     • Bus Stop Density: 0.000<br>                     • Bike Lanes: 1.000<br>                     • Pop. Density: 0.228                 </div>                  <div style="font-weight: bold; color: #CC0000;">                     Priority Score: 0.400                 </div>             </div>             </div>`)[0];
+                popup_8b5567ce7781dad39eb59c5d5b7e1a58.setContent(html_85bd75f543405536f75e64f09b7135ab);
+            
+        
+
+        geo_json_9b62d3aa70f6ac05985faef2508047b0.bindPopup(popup_8b5567ce7781dad39eb59c5d5b7e1a58)
+        ;
+
+        
+    
+    
+            geo_json_9b62d3aa70f6ac05985faef2508047b0.addTo(geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40);
+        
+    
+        function geo_json_2e86c0e9aab52eddcfb7a17df8a6b4e3_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "#FF6B1A", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_2e86c0e9aab52eddcfb7a17df8a6b4e3_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_2e86c0e9aab52eddcfb7a17df8a6b4e3 = L.geoJson(null, {
+                onEachFeature: geo_json_2e86c0e9aab52eddcfb7a17df8a6b4e3_onEachFeature,
+            
+                style: geo_json_2e86c0e9aab52eddcfb7a17df8a6b4e3_styler,
+            ...{
+}
+        });
+
+        function geo_json_2e86c0e9aab52eddcfb7a17df8a6b4e3_add (data) {
+            geo_json_2e86c0e9aab52eddcfb7a17df8a6b4e3
+                .addData(data);
+        }
+            geo_json_2e86c0e9aab52eddcfb7a17df8a6b4e3_add({"features": [{"bbox": [-73.90357329656516, 40.66351634454606, -73.90237559827436, 40.66812697315988], "geometry": {"coordinates": [[-73.90357329656516, 40.66812697315988], [-73.90319083737545, 40.66659102212513], [-73.90309642443498, 40.66622008049542], [-73.90307960699992, 40.66615400591494], [-73.90291661774795, 40.665513618473426], [-73.90288942557932, 40.66540677903864], [-73.90280184495722, 40.665062664547435], [-73.90274888045222, 40.664870526144576], [-73.90270314827347, 40.66470462345142], [-73.90269072798692, 40.66465956734097], [-73.90267238299951, 40.66459301627275], [-73.90259292815227, 40.66430477505834], [-73.90256903804628, 40.66421810995263], [-73.90237559827436, 40.66351634454606]], "type": "LineString"}, "id": "3", "properties": {"BikeLnIndx": 0.5904370419650334, "BusDensInx": 0.0, "BusStpDens": 12.333613724159889, "Street": "POWELL STREET", "StreetCode": "372030", "bike_length": 2310.0512181029076, "heat_indx": 0.6035891383962432, "heat_mean": 108.2683783374355, "hvi_raw": 5.0, "is_priority": true, "pav_rate": 7.364605701786604, "pave_indx": 0.2928215886903773, "pop_dens_indx": 0.26745275404600966, "pop_density": 57196.4098326027, "priority": 0.3304936831001202, "tree_indx": 0.935845671319724, "tree_pct": 6.195635818701369, "vuln_indx": 2.220446049250313e-16}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+        var popup_59a4489f21a1ce6b928f1ba924ccb9c9 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_8c055f8493b3704428bbdeb64574a753 = $(`<div id="html_8c055f8493b3704428bbdeb64574a753" style="width: 100.0%; height: 100.0%;">             <div style="font-family: Arial; min-width: 200px; max-width: 300px;">                 <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">                     POWELL STREET                 </h4>                  <div style="margin-bottom: 10px;">                     <b>Raw Values</b><br>                     • Pavement Rating: 7.4<br>                     • Average Summer Heat: 108.3 (°F)<br>                     • Tree Canopy: 6.2%<br>                     • Heat Vulnerability Index Average: 5.00<br>                     • Bus Stop Density: 12.334 Stops per Mile<br>                     • Bike Lane: 2,310.051 ft of Bike Lane Nearby<br>                     • Pop. Density: 57,196 People per sq mi                 </div>                  <div style="margin-bottom: 10px;">                     <b>Index Values</b><br>                     • Pavement: 0.293<br>                     • Heat: 0.604<br>                     • Tree Canopy: 0.936<br>                     • Heat Vulnerability: 0.000<br>                     • Bus Stop Density: 0.000<br>                     • Bike Lanes: 0.590<br>                     • Pop. Density: 0.267                 </div>                  <div style="font-weight: bold; color: #CC0000;">                     Priority Score: 0.330                 </div>             </div>             </div>`)[0];
+                popup_59a4489f21a1ce6b928f1ba924ccb9c9.setContent(html_8c055f8493b3704428bbdeb64574a753);
+            
+        
+
+        geo_json_2e86c0e9aab52eddcfb7a17df8a6b4e3.bindPopup(popup_59a4489f21a1ce6b928f1ba924ccb9c9)
+        ;
+
+        
+    
+    
+            geo_json_2e86c0e9aab52eddcfb7a17df8a6b4e3.addTo(geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40);
+        
+    
+        function geo_json_dbdf25337ad542464e9886261dc60f84_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "#FF4D00", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_dbdf25337ad542464e9886261dc60f84_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_dbdf25337ad542464e9886261dc60f84 = L.geoJson(null, {
+                onEachFeature: geo_json_dbdf25337ad542464e9886261dc60f84_onEachFeature,
+            
+                style: geo_json_dbdf25337ad542464e9886261dc60f84_styler,
+            ...{
+}
+        });
+
+        function geo_json_dbdf25337ad542464e9886261dc60f84_add (data) {
+            geo_json_dbdf25337ad542464e9886261dc60f84
+                .addData(data);
+        }
+            geo_json_dbdf25337ad542464e9886261dc60f84_add({"features": [{"bbox": [-73.90787715839201, 40.667286344153396, -73.90624890256026, 40.67356624333812], "geometry": {"coordinates": [[-73.90787715839201, 40.67356624333812], [-73.90776137932052, 40.67313659865681], [-73.90774733509366, 40.67308448338314], [-73.90766948505441, 40.67279558606383], [-73.90765586992357, 40.67274505869751], [-73.907608834968, 40.67256227563424], [-73.90759508266437, 40.67250883182952], [-73.90755105564698, 40.67233773564976], [-73.90753535287101, 40.67227671167758], [-73.90748063899015, 40.672064084505145], [-73.90746461149044, 40.67200179821361], [-73.90733683860431, 40.671505244212064], [-73.90706069216824, 40.67047309878637], [-73.90704209302947, 40.67040357841631], [-73.90699849364658, 40.67024061343863], [-73.90667395364135, 40.6689739928548], [-73.90635512684342, 40.66770734040978], [-73.90624890256026, 40.667286344153396]], "type": "LineString"}, "id": "4", "properties": {"BikeLnIndx": 0.8333731001402394, "BusDensInx": 0.030105571343843292, "BusStpDens": 13.584101766389576, "Street": "MOTHER GASTON BOULEVARD", "StreetCode": "382230", "bike_length": 3235.8453609208896, "heat_indx": 0.645502983160341, "heat_mean": 109.99115835442036, "hvi_raw": 5.0, "is_priority": true, "pav_rate": 7.829931918399998, "pave_indx": 0.2411186757333336, "pop_dens_indx": 0.2650729055824666, "pop_density": 56687.46466004006, "priority": 0.3737990521126395, "tree_indx": 0.9623019088299516, "tree_pct": 3.6406529185867664, "vuln_indx": 2.220446049250313e-16}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+        var popup_c07ba7273232770e6a75f200d38d1a38 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_45c44719bed59daa8d72b338a6948bf3 = $(`<div id="html_45c44719bed59daa8d72b338a6948bf3" style="width: 100.0%; height: 100.0%;">             <div style="font-family: Arial; min-width: 200px; max-width: 300px;">                 <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">                     MOTHER GASTON BOULEVARD                 </h4>                  <div style="margin-bottom: 10px;">                     <b>Raw Values</b><br>                     • Pavement Rating: 7.8<br>                     • Average Summer Heat: 110.0 (°F)<br>                     • Tree Canopy: 3.6%<br>                     • Heat Vulnerability Index Average: 5.00<br>                     • Bus Stop Density: 13.584 Stops per Mile<br>                     • Bike Lane: 3,235.845 ft of Bike Lane Nearby<br>                     • Pop. Density: 56,687 People per sq mi                 </div>                  <div style="margin-bottom: 10px;">                     <b>Index Values</b><br>                     • Pavement: 0.241<br>                     • Heat: 0.646<br>                     • Tree Canopy: 0.962<br>                     • Heat Vulnerability: 0.000<br>                     • Bus Stop Density: 0.030<br>                     • Bike Lanes: 0.833<br>                     • Pop. Density: 0.265                 </div>                  <div style="font-weight: bold; color: #CC0000;">                     Priority Score: 0.374                 </div>             </div>             </div>`)[0];
+                popup_c07ba7273232770e6a75f200d38d1a38.setContent(html_45c44719bed59daa8d72b338a6948bf3);
+            
+        
+
+        geo_json_dbdf25337ad542464e9886261dc60f84.bindPopup(popup_c07ba7273232770e6a75f200d38d1a38)
+        ;
+
+        
+    
+    
+            geo_json_dbdf25337ad542464e9886261dc60f84.addTo(geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40);
+        
+    
+        function geo_json_46aebf6d7b3fe87e352d3d238e8d0023_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "#FF9940", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_46aebf6d7b3fe87e352d3d238e8d0023_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_46aebf6d7b3fe87e352d3d238e8d0023 = L.geoJson(null, {
+                onEachFeature: geo_json_46aebf6d7b3fe87e352d3d238e8d0023_onEachFeature,
+            
+                style: geo_json_46aebf6d7b3fe87e352d3d238e8d0023_styler,
+            ...{
+}
+        });
+
+        function geo_json_46aebf6d7b3fe87e352d3d238e8d0023_add (data) {
+            geo_json_46aebf6d7b3fe87e352d3d238e8d0023
+                .addData(data);
+        }
+            geo_json_46aebf6d7b3fe87e352d3d238e8d0023_add({"features": [{"bbox": [-73.91009074360443, 40.66715376486237, -73.90357329656516, 40.66812697315988], "geometry": {"coordinates": [[-73.91009074360443, 40.66715376486237], [-73.90959325870011, 40.66722617694406], [-73.90951541831173, 40.6672375069546], [-73.90944042543562, 40.66724842277737], [-73.90936553637088, 40.66725932298806], [-73.90910665669074, 40.667297002976944], [-73.90903253114003, 40.6673077921378], [-73.90870219198196, 40.66735587241233], [-73.90861374851387, 40.66736874527212], [-73.90830684464312, 40.66741341292731], [-73.90823170859836, 40.6674243478847], [-73.90807324594263, 40.66744824579217], [-73.90720538372167, 40.66757912411177], [-73.90709087157016, 40.667596392707345], [-73.90692784358593, 40.66762097729867], [-73.90635512684342, 40.66770734040978], [-73.90616504156256, 40.66773615706218], [-73.90557718491873, 40.667825273672236], [-73.90538646295764, 40.66785418540497], [-73.9050262620463, 40.667906560109955], [-73.90495488866296, 40.667916937753844], [-73.9047873210809, 40.66794130200949], [-73.90475329232814, 40.66794625004975], [-73.90446426856498, 40.66798827331035], [-73.90423813680604, 40.668023476519714], [-73.90392119694141, 40.66807281574246], [-73.90357329656516, 40.66812697315988]], "type": "LineString"}, "id": "5", "properties": {"BikeLnIndx": 0.43448437609499996, "BusDensInx": 0.0, "BusStpDens": 0.0, "Street": "SUTTER AVENUE", "StreetCode": "383730", "bike_length": 1715.738188971597, "heat_indx": 0.5748081535132266, "heat_mean": 107.0853967735949, "hvi_raw": 5.0, "is_priority": true, "pav_rate": 8.62522329270162, "pave_indx": 0.15275296747759798, "pop_dens_indx": 0.2995628046541767, "pop_density": 64063.34085704222, "priority": 0.2974278384960703, "tree_indx": 0.8984155650490694, "tree_pct": 9.810408381656504, "vuln_indx": 2.1996476002064825e-16}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+        var popup_5535bafdb6dc83b1bcce85d21fd2f03a = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_7f9f366b64104b4dade26b8eb5c65a6b = $(`<div id="html_7f9f366b64104b4dade26b8eb5c65a6b" style="width: 100.0%; height: 100.0%;">             <div style="font-family: Arial; min-width: 200px; max-width: 300px;">                 <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">                     SUTTER AVENUE                 </h4>                  <div style="margin-bottom: 10px;">                     <b>Raw Values</b><br>                     • Pavement Rating: 8.6<br>                     • Average Summer Heat: 107.1 (°F)<br>                     • Tree Canopy: 9.8%<br>                     • Heat Vulnerability Index Average: 5.00<br>                     • Bus Stop Density: 0.000 Stops per Mile<br>                     • Bike Lane: 1,715.738 ft of Bike Lane Nearby<br>                     • Pop. Density: 64,063 People per sq mi                 </div>                  <div style="margin-bottom: 10px;">                     <b>Index Values</b><br>                     • Pavement: 0.153<br>                     • Heat: 0.575<br>                     • Tree Canopy: 0.898<br>                     • Heat Vulnerability: 0.000<br>                     • Bus Stop Density: 0.000<br>                     • Bike Lanes: 0.434<br>                     • Pop. Density: 0.300                 </div>                  <div style="font-weight: bold; color: #CC0000;">                     Priority Score: 0.297                 </div>             </div>             </div>`)[0];
+                popup_5535bafdb6dc83b1bcce85d21fd2f03a.setContent(html_7f9f366b64104b4dade26b8eb5c65a6b);
+            
+        
+
+        geo_json_46aebf6d7b3fe87e352d3d238e8d0023.bindPopup(popup_5535bafdb6dc83b1bcce85d21fd2f03a)
+        ;
+
+        
+    
+    
+            geo_json_46aebf6d7b3fe87e352d3d238e8d0023.addTo(geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40);
+        
+    
+            geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40.addTo(map_19a419b9a1f797c75c260c67cb9fcef8);
+        
+    
+            var layer_control_a91743941a98f6952848ac83563c78cf_layers = {
+                base_layers : {
+                    "cartodbpositron" : tile_layer_9e99a7b6c02e7effc349f20155ec74b9,
+                },
+                overlays :  {
+                    "CSC_Neighborhoods" : geo_json_cc0b5aff901c3b75d0faf467577446af,
+                    "SingleScenario" : geo_json_47ed7cd76d9b8e2c12bb0d5a43c80d40,
+                },
+            };
+            let layer_control_a91743941a98f6952848ac83563c78cf = L.control.layers(
+                layer_control_a91743941a98f6952848ac83563c78cf_layers.base_layers,
+                layer_control_a91743941a98f6952848ac83563c78cf_layers.overlays,
+                {
+  "position": "topright",
+  "collapsed": false,
+  "autoZIndex": true,
+}
+            ).addTo(map_19a419b9a1f797c75c260c67cb9fcef8);
+
+        
+</script>
+</html>

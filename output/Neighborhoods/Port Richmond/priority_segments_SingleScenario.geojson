@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "priority_segments_SingleScenario",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::2263" } },
+"features": [
+
+]
+}

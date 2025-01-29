@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    
+        <script>
+            L_NO_TOUCH = false;
+            L_DISABLE_3D = false;
+        </script>
+    
+    <style>html, body {width: 100%;height: 100%;margin: 0;padding: 0;}</style>
+    <style>#map {position:absolute;top:0;bottom:0;right:0;left:0;}</style>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_4d4e821e8e2cf036dd4facbf7312e07f {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+        
+    
+                    <style>
+                        .foliumtooltip {
+                            
+                    background-color: white;
+                    border: 2px solid black;
+                    border-radius: 3px;
+                    box-shadow: 3px;
+                
+                        }
+                       .foliumtooltip table{
+                            margin: auto;
+                        }
+                        .foliumtooltip tr{
+                            text-align: left;
+                        }
+                        .foliumtooltip th{
+                            padding: 2px; padding-right: 8px;
+                        }
+                    </style>
+            
+</head>
+<body>
+    
+    
+    <div style="position: fixed; bottom: 50px; right: 50px; 
+                background: white; padding: 10px; border: 2px solid grey;">
+        <h4>Priority Score</h4>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+    
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #CC0000;"></div>
+                <span>1.0</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #E63900;"></div>
+                <span>0.83</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #FF4D00;"></div>
+                <span>0.67</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #FF6B1A;"></div>
+                <span>0.5</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #FF8533;"></div>
+                <span>0.33</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #FF9940;"></div>
+                <span>0.17</span>
+            </div>
+        
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <div style="width: 20px; height: 3px; background: #FFB366;"></div>
+                <span>0.0</span>
+            </div>
+        </div></div>
+    
+            <div class="folium-map" id="map_4d4e821e8e2cf036dd4facbf7312e07f" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_4d4e821e8e2cf036dd4facbf7312e07f = L.map(
+                "map_4d4e821e8e2cf036dd4facbf7312e07f",
+                {
+                    center: [40.746382191984765, -73.86060791185663],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 14,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_9ac2a7485a9fc375271e7907e5db98e8 = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors \u0026copy; \u003ca href=\"https://carto.com/attributions\"\u003eCARTO\u003c/a\u003e",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_9ac2a7485a9fc375271e7907e5db98e8.addTo(map_4d4e821e8e2cf036dd4facbf7312e07f);
+        
+    
+        function geo_json_6b22ed1881f1394f108f3638a9975924_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "gray", "fillOpacity": 0.1, "weight": 1};
+            }
+        }
+
+        function geo_json_6b22ed1881f1394f108f3638a9975924_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_6b22ed1881f1394f108f3638a9975924 = L.geoJson(null, {
+                onEachFeature: geo_json_6b22ed1881f1394f108f3638a9975924_onEachFeature,
+            
+                style: geo_json_6b22ed1881f1394f108f3638a9975924_styler,
+            ...{
+}
+        });
+
+        function geo_json_6b22ed1881f1394f108f3638a9975924_add (data) {
+            geo_json_6b22ed1881f1394f108f3638a9975924
+                .addData(data);
+        }
+            geo_json_6b22ed1881f1394f108f3638a9975924_add({"bbox": [-73.87365862685365, 40.73428995577856, -73.84755719685961, 40.758474428190965], "features": [{"bbox": [-73.87365862685365, 40.73428995577856, -73.84755719685961, 40.758474428190965], "geometry": {"coordinates": [[[-73.84796494486143, 40.73988306262153], [-73.84799852506043, 40.73993890247075], [-73.84804290008513, 40.73999019997873], [-73.84809635711804, 40.74003525991747], [-73.84897401568955, 40.74030913414507], [-73.84940432222861, 40.74044341505643], [-73.84963427621021, 40.74051516907774], [-73.84986321094098, 40.7405849870172], [-73.84996566095872, 40.74071003998866], [-73.85011696705077, 40.740731830295495], [-73.85020584569791, 40.740910301569144], [-73.85051300975925, 40.74152712490376], [-73.85087057558468, 40.74218867965133], [-73.85099467393628, 40.74243081048898], [-73.8512106920587, 40.74285228905026], [-73.85135242831431, 40.7431273261234], [-73.85155247379251, 40.743515495191915], [-73.8518967754103, 40.74418800663859], [-73.85224237589813, 40.744849234382414], [-73.8525787401924, 40.74551391525228], [-73.85292493674717, 40.74619021607127], [-73.85325633323504, 40.746831818364974], [-73.85360708511237, 40.74750509708661], [-73.8537842711781, 40.74781125973419], [-73.85382590940313, 40.747862308333076], [-73.85405593494507, 40.74816658528829], [-73.85437068329425, 40.74874719961283], [-73.85442715446386, 40.748859996530555], [-73.85131245142426, 40.74985164521609], [-73.8508657980133, 40.750003910920334], [-73.8509883148631, 40.75024756759019], [-73.85118291040833, 40.75063456547526], [-73.851520236397, 40.751305405972985], [-73.85171648742703, 40.75169568377052], [-73.85185754796132, 40.751976202166425], [-73.85220590721005, 40.75266895232866], [-73.85261865509815, 40.75341333508114], [-73.85302260187602, 40.75462627206229], [-73.85327032700107, 40.75571390472853], [-73.85356789977776, 40.75663392934001], [-73.85389204321693, 40.757327234730745], [-73.85420972243124, 40.75787563857706], [-73.8546413597684, 40.758474428190965], [-73.8549743676619, 40.758427356091865], [-73.85535581215794, 40.758402720537106], [-73.85540506446779, 40.75834858089381], [-73.85560960176551, 40.75831368167261], [-73.8585627944182, 40.75792070739864], [-73.86462097220654, 40.75770198688723], [-73.86567577688157, 40.7576378529813], [-73.87095629602918, 40.75708356533818], [-73.87365862685365, 40.75681175506958], [-73.87346063329501, 40.756447804381246], [-73.87084356339022, 40.7515529617397], [-73.87033984367062, 40.750711448388735], [-73.86968691568913, 40.74962063059862], [-73.86942599340318, 40.74916511970816], [-73.86919328775944, 40.74877116199894], [-73.86891536506059, 40.74837714513995], [-73.86853065935259, 40.747596570092654], [-73.86843891707032, 40.747039465428884], [-73.8682664327917, 40.746322490360036], [-73.86808714811586, 40.745608849851976], [-73.86791104479536, 40.74494198411226], [-73.86787735754328, 40.74482357372014], [-73.86785238128469, 40.74472481428749], [-73.86782831731762, 40.744637724675734], [-73.86768645562908, 40.74407998531581], [-73.86749275643619, 40.74331031548156], [-73.86748770732927, 40.74300046196116], [-73.86747309829737, 40.74210398930883], [-73.86755870122971, 40.74168596380544], [-73.86756394064304, 40.74095015550547], [-73.86731919974233, 40.74026961177618], [-73.86714810392445, 40.739845491180226], [-73.86704114297959, 40.73958045705793], [-73.86676152756316, 40.73889863713595], [-73.86648152116071, 40.738219231174355], [-73.86609604284043, 40.73725969586709], [-73.86583096554165, 40.73665148983826], [-73.86550202142507, 40.73599759778964], [-73.86516005887584, 40.73533328050767], [-73.86481645740784, 40.734668481146144], [-73.86462333927916, 40.73428995577856], [-73.86284140643937, 40.73480775981674], [-73.86191389320136, 40.73507671319136], [-73.86106534843378, 40.73532275809028], [-73.86019061245887, 40.73557639045321], [-73.85942975172948, 40.7357969984816], [-73.85886695915178, 40.735947405666366], [-73.85877281463873, 40.73579355533632], [-73.85869820316422, 40.73581265366264], [-73.85806082145959, 40.735998995635924], [-73.85803830198824, 40.73600572349744], [-73.85665736763364, 40.736418246211215], [-73.85632400875957, 40.73651440049147], [-73.85627649353691, 40.73652571102976], [-73.85508625062508, 40.736809018056455], [-73.85446467755688, 40.73691627280875], [-73.85417669321814, 40.736965963311064], [-73.8534239377593, 40.737089882183625], [-73.85278372247531, 40.73721762223581], [-73.85261608739961, 40.737258875364], [-73.85191388843074, 40.73743167375805], [-73.85134744635015, 40.7375967196046], [-73.85092163397694, 40.7377387107595], [-73.85084911163614, 40.73776289368066], [-73.85083805888112, 40.73776657955717], [-73.85000353151705, 40.73804485335758], [-73.84960998188583, 40.73819148237736], [-73.8491363530482, 40.73837352845595], [-73.84863762818857, 40.73856521737436], [-73.8480649165915, 40.73882402503661], [-73.84755719685961, 40.73907218272738], [-73.84767173734815, 40.73920350330945], [-73.84775880076388, 40.73930735615463], [-73.84777984219062, 40.739353102802696], [-73.84779313444915, 40.739839052947325], [-73.84783275507772, 40.739852815549604], [-73.84794313994742, 40.739824672759966], [-73.84796494486143, 40.73988306262153]]], "type": "Polygon"}, "id": "4", "properties": {"Name": "Corona", "OBJECTID": 5, "Shape_Area": 37986795.985248744, "Shape_Length": 27684.074978700115, "Year": "Year 1"}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+            geo_json_6b22ed1881f1394f108f3638a9975924.addTo(map_4d4e821e8e2cf036dd4facbf7312e07f);
+        
+    
+        function geo_json_94269c22ad87486df1970954b1d3494d_styler(feature) {
+            switch(feature.id) {
+                case "0": 
+                    return {"color": "#FF4D00", "opacity": 0.8, "weight": 3};
+                case "1": 
+                    return {"color": "#CC0000", "opacity": 0.8, "weight": 3};
+                case "2": 
+                    return {"color": "#FFB366", "opacity": 0.8, "weight": 3};
+                default:
+                    return {"color": "#FF9940", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_94269c22ad87486df1970954b1d3494d_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_94269c22ad87486df1970954b1d3494d = L.geoJson(null, {
+                onEachFeature: geo_json_94269c22ad87486df1970954b1d3494d_onEachFeature,
+            
+                style: geo_json_94269c22ad87486df1970954b1d3494d_styler,
+            ...{
+}
+        });
+
+        function geo_json_94269c22ad87486df1970954b1d3494d_add (data) {
+            geo_json_94269c22ad87486df1970954b1d3494d
+                .addData(data);
+        }
+            geo_json_94269c22ad87486df1970954b1d3494d_add({"bbox": [-73.87365391186606, 40.73664330335171, -73.85191686153418, 40.75833960705098], "features": [{"bbox": [-73.86582684723999, 40.73664330335171, -73.86007160480537, 40.7383722044679], "geometry": {"coordinates": [[-73.86582684723999, 40.73664330335171], [-73.86492975366598, 40.736894136272944], [-73.86473526604892, 40.7369532690905], [-73.86404743527166, 40.737162403104804], [-73.86317298951947, 40.73742139692311], [-73.86229958971336, 40.73768118654868], [-73.861431718582, 40.737954475455254], [-73.86007160480537, 40.7383722044679]], "type": "LineString"}, "id": "0", "properties": {"BikeLnIndx": 0.4483788889596688, "BusDensInx": 0.0180926154942578, "BusStpDens": 21.551870248569553, "Street": "57 AVENUE", "StreetCode": "411840", "bike_length": 1875.096622556986, "heat_indx": 0.5826023760587815, "heat_mean": 107.4057618206334, "hvi_raw": 4.0, "is_priority": true, "pav_rate": 6.179512480925799, "pave_indx": 0.4361599453784248, "pop_dens_indx": 0.6205263325746306, "pop_density": 132703.35748255134, "priority": 0.43374261697947364, "tree_indx": 0.9444247207813437, "tree_pct": 5.367123273589787, "vuln_indx": 0.2}, "type": "Feature"}, {"bbox": [-73.86240983269367, 40.73963533388138, -73.86072921046876, 40.742889195822244], "geometry": {"coordinates": [[-73.86240983269367, 40.742889195822244], [-73.86185490152792, 40.7415884415628], [-73.86072921046876, 40.73963533388138]], "type": "LineString"}, "id": "1", "properties": {"BikeLnIndx": 1.0, "BusDensInx": 0.0, "BusStpDens": 37.2652449883478, "Street": "99 STREET", "StreetCode": "419190", "bike_length": 4007.9992967902776, "heat_indx": 0.612865984566058, "heat_mean": 108.64968349547935, "hvi_raw": 4.0, "is_priority": true, "pav_rate": 6.0, "pave_indx": 0.4444444444444444, "pop_dens_indx": 0.4140952763723139, "pop_density": 88556.81154459632, "priority": 0.47390477033107675, "tree_indx": 0.8978412832650371, "tree_pct": 9.865869032003411, "vuln_indx": 0.2}, "type": "Feature"}, {"bbox": [-73.85495039998192, 40.737430942142296, -73.85191686153418, 40.743332845164254], "geometry": {"coordinates": [[-73.85495039998192, 40.743332845164254], [-73.85462122741384, 40.742682605440265], [-73.85431657644067, 40.74208859674502], [-73.85381304548099, 40.74110310950247], [-73.85362263334342, 40.74074151199254], [-73.85334163626199, 40.74019353761051], [-73.85306510795044, 40.7396562118024], [-73.85287306037523, 40.73928820791703], [-73.85243462472967, 40.7384053833918], [-73.85204765412526, 40.73768134633179], [-73.85191686153418, 40.737430942142296]], "type": "LineString"}, "id": "2", "properties": {"BikeLnIndx": 0.19679201253095208, "BusDensInx": 0.046372430636875545, "BusStpDens": 43.45124334210406, "Street": "108 STREET", "StreetCode": "420190", "bike_length": 902.3087600243334, "heat_indx": 0.6344944807667302, "heat_mean": 109.53867712662121, "hvi_raw": 4.0, "is_priority": true, "pav_rate": 6.22876419218694, "pave_indx": 0.4190262008681177, "pop_dens_indx": 0.3560363102853168, "pop_density": 76140.54598541722, "priority": 0.3399614835875031, "tree_indx": 0.8456503026306277, "tree_pct": 14.906157281970115, "vuln_indx": 0.2}, "type": "Feature"}, {"bbox": [-73.87365391186606, 40.7568030880553, -73.85540369999283, 40.75833960705098], "geometry": {"coordinates": [[-73.87365391186606, 40.7568030880553], [-73.87311054839807, 40.75685019692484], [-73.87221856630829, 40.756942538656816], [-73.87132396332296, 40.7570356539047], [-73.8704137205908, 40.75713172484832], [-73.86950315632542, 40.75722732986211], [-73.86848375930916, 40.75733424787663], [-73.86746337710849, 40.757440849971466], [-73.86656999055677, 40.75753483025963], [-73.86567438647563, 40.757628891059866], [-73.86461958521139, 40.75769302300846], [-73.86371502018383, 40.757724976946136], [-73.86280706497178, 40.75775828882282], [-73.86190619705579, 40.75779416756858], [-73.86099885085355, 40.75782429655954], [-73.86046165054606, 40.75784303432548], [-73.85992749082136, 40.75786340312141], [-73.85951335422462, 40.75787789155394], [-73.85888935533904, 40.7578987768563], [-73.85856142202519, 40.75791173714417], [-73.85775354588434, 40.758026574171886], [-73.85695190377795, 40.75813242586474], [-73.85560823685577, 40.758304707945555], [-73.85540369999283, 40.75833960705098]], "type": "LineString"}, "id": "3", "properties": {"BikeLnIndx": 0.046224508058751286, "BusDensInx": 0.03084682355339374, "BusStpDens": 13.476824613737937, "Street": "NORTHERN BOULEVARD", "StreetCode": "457790", "bike_length": 320.12322268018715, "heat_indx": 0.6245527433084133, "heat_mean": 109.13004301720709, "hvi_raw": 3.0000000000000004, "is_priority": true, "pav_rate": 7.96847282372863, "pave_indx": 0.2286823764962763, "pop_dens_indx": 0.2862814478265061, "pop_density": 61223.041339626136, "priority": 0.3817147662369627, "tree_indx": 0.9788886524817558, "tree_pct": 2.038805853879991, "vuln_indx": 0.4}, "type": "Feature"}, {"bbox": [-73.86175074395331, 40.7499668821706, -73.85583499723649, 40.75157655883895], "geometry": {"coordinates": [[-73.86175074395331, 40.7499668821706], [-73.86111710744994, 40.75002351799652], [-73.85876328550013, 40.75071625996564], [-73.85583499723649, 40.75157655883895]], "type": "LineString"}, "id": "4", "properties": {"BikeLnIndx": 0.0, "BusDensInx": 0.0, "BusStpDens": 18.145796063492668, "Street": "ROOSEVELT AVENUE", "StreetCode": "461090", "bike_length": 141.39116388046423, "heat_indx": 0.6140698296127535, "heat_mean": 108.69916500216684, "hvi_raw": 3.672803450558665, "is_priority": true, "pav_rate": 6.253612114942639, "pave_indx": 0.4162653205619291, "pop_dens_indx": 0.4257047065858198, "pop_density": 91039.55931357406, "priority": 0.3643007649824497, "tree_indx": 1.0, "tree_pct": 0.0, "vuln_indx": 0.2654393098882673}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+    geo_json_94269c22ad87486df1970954b1d3494d.bindTooltip(
+    function(layer){
+    let div = L.DomUtil.create('div');
+    
+    let handleObject = feature=>typeof(feature)=='object' ? JSON.stringify(feature) : feature;
+    let fields = ["priority"];
+    let aliases = ["Priority Score:"];
+    let table = '<table>' +
+        String(
+        fields.map(
+        (v,i)=>
+        `<tr>
+            <th>${aliases[i]}</th>
+            
+            <td>${handleObject(layer.feature.properties[v])}</td>
+        </tr>`).join(''))
+    +'</table>';
+    div.innerHTML=table;
+    
+    return div
+    }
+    ,{
+  "sticky": false,
+  "className": "foliumtooltip",
+});
+                     
+    
+        function geo_json_ab950ed4a31818b95de6dd910844d6c8_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "#FF4D00", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_ab950ed4a31818b95de6dd910844d6c8_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_ab950ed4a31818b95de6dd910844d6c8 = L.geoJson(null, {
+                onEachFeature: geo_json_ab950ed4a31818b95de6dd910844d6c8_onEachFeature,
+            
+                style: geo_json_ab950ed4a31818b95de6dd910844d6c8_styler,
+            ...{
+}
+        });
+
+        function geo_json_ab950ed4a31818b95de6dd910844d6c8_add (data) {
+            geo_json_ab950ed4a31818b95de6dd910844d6c8
+                .addData(data);
+        }
+            geo_json_ab950ed4a31818b95de6dd910844d6c8_add({"features": [{"bbox": [-73.86582684723999, 40.73664330335171, -73.86007160480537, 40.7383722044679], "geometry": {"coordinates": [[-73.86582684723999, 40.73664330335171], [-73.86492975366598, 40.736894136272944], [-73.86473526604892, 40.7369532690905], [-73.86404743527166, 40.737162403104804], [-73.86317298951947, 40.73742139692311], [-73.86229958971336, 40.73768118654868], [-73.861431718582, 40.737954475455254], [-73.86007160480537, 40.7383722044679]], "type": "LineString"}, "id": "0", "properties": {"BikeLnIndx": 0.4483788889596688, "BusDensInx": 0.0180926154942578, "BusStpDens": 21.551870248569553, "Street": "57 AVENUE", "StreetCode": "411840", "bike_length": 1875.096622556986, "heat_indx": 0.5826023760587815, "heat_mean": 107.4057618206334, "hvi_raw": 4.0, "is_priority": true, "pav_rate": 6.179512480925799, "pave_indx": 0.4361599453784248, "pop_dens_indx": 0.6205263325746306, "pop_density": 132703.35748255134, "priority": 0.43374261697947364, "tree_indx": 0.9444247207813437, "tree_pct": 5.367123273589787, "vuln_indx": 0.2}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+        var popup_cc749b2a1c7bad2dc3a1048a491d5673 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_d56df567c8ca4105248c34e4be9b08cc = $(`<div id="html_d56df567c8ca4105248c34e4be9b08cc" style="width: 100.0%; height: 100.0%;">             <div style="font-family: Arial; min-width: 200px; max-width: 300px;">                 <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">                     57 AVENUE                 </h4>                  <div style="margin-bottom: 10px;">                     <b>Raw Values</b><br>                     • Pavement Rating: 6.2<br>                     • Average Summer Heat: 107.4 (°F)<br>                     • Tree Canopy: 5.4%<br>                     • Heat Vulnerability Index Average: 4.00<br>                     • Bus Stop Density: 21.552 Stops per Mile<br>                     • Bike Lane: 1,875.097 ft of Bike Lane Nearby<br>                     • Pop. Density: 132,703 People per sq mi                 </div>                  <div style="margin-bottom: 10px;">                     <b>Index Values</b><br>                     • Pavement: 0.436<br>                     • Heat: 0.583<br>                     • Tree Canopy: 0.944<br>                     • Heat Vulnerability: 0.200<br>                     • Bus Stop Density: 0.018<br>                     • Bike Lanes: 0.448<br>                     • Pop. Density: 0.621                 </div>                  <div style="font-weight: bold; color: #CC0000;">                     Priority Score: 0.434                 </div>             </div>             </div>`)[0];
+                popup_cc749b2a1c7bad2dc3a1048a491d5673.setContent(html_d56df567c8ca4105248c34e4be9b08cc);
+            
+        
+
+        geo_json_ab950ed4a31818b95de6dd910844d6c8.bindPopup(popup_cc749b2a1c7bad2dc3a1048a491d5673)
+        ;
+
+        
+    
+    
+            geo_json_ab950ed4a31818b95de6dd910844d6c8.addTo(geo_json_94269c22ad87486df1970954b1d3494d);
+        
+    
+        function geo_json_04fd1da56a02cce02d2b20089ae3df50_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "#CC0000", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_04fd1da56a02cce02d2b20089ae3df50_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_04fd1da56a02cce02d2b20089ae3df50 = L.geoJson(null, {
+                onEachFeature: geo_json_04fd1da56a02cce02d2b20089ae3df50_onEachFeature,
+            
+                style: geo_json_04fd1da56a02cce02d2b20089ae3df50_styler,
+            ...{
+}
+        });
+
+        function geo_json_04fd1da56a02cce02d2b20089ae3df50_add (data) {
+            geo_json_04fd1da56a02cce02d2b20089ae3df50
+                .addData(data);
+        }
+            geo_json_04fd1da56a02cce02d2b20089ae3df50_add({"features": [{"bbox": [-73.86240983269367, 40.73963533388138, -73.86072921046876, 40.742889195822244], "geometry": {"coordinates": [[-73.86240983269367, 40.742889195822244], [-73.86185490152792, 40.7415884415628], [-73.86072921046876, 40.73963533388138]], "type": "LineString"}, "id": "1", "properties": {"BikeLnIndx": 1.0, "BusDensInx": 0.0, "BusStpDens": 37.2652449883478, "Street": "99 STREET", "StreetCode": "419190", "bike_length": 4007.9992967902776, "heat_indx": 0.612865984566058, "heat_mean": 108.64968349547935, "hvi_raw": 4.0, "is_priority": true, "pav_rate": 6.0, "pave_indx": 0.4444444444444444, "pop_dens_indx": 0.4140952763723139, "pop_density": 88556.81154459632, "priority": 0.47390477033107675, "tree_indx": 0.8978412832650371, "tree_pct": 9.865869032003411, "vuln_indx": 0.2}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+        var popup_517c8b58845b9a7b3582fce2f865d2a0 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_d6a8f5fdde26d949d94f911f70bb9e5a = $(`<div id="html_d6a8f5fdde26d949d94f911f70bb9e5a" style="width: 100.0%; height: 100.0%;">             <div style="font-family: Arial; min-width: 200px; max-width: 300px;">                 <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">                     99 STREET                 </h4>                  <div style="margin-bottom: 10px;">                     <b>Raw Values</b><br>                     • Pavement Rating: 6.0<br>                     • Average Summer Heat: 108.6 (°F)<br>                     • Tree Canopy: 9.9%<br>                     • Heat Vulnerability Index Average: 4.00<br>                     • Bus Stop Density: 37.265 Stops per Mile<br>                     • Bike Lane: 4,007.999 ft of Bike Lane Nearby<br>                     • Pop. Density: 88,557 People per sq mi                 </div>                  <div style="margin-bottom: 10px;">                     <b>Index Values</b><br>                     • Pavement: 0.444<br>                     • Heat: 0.613<br>                     • Tree Canopy: 0.898<br>                     • Heat Vulnerability: 0.200<br>                     • Bus Stop Density: 0.000<br>                     • Bike Lanes: 1.000<br>                     • Pop. Density: 0.414                 </div>                  <div style="font-weight: bold; color: #CC0000;">                     Priority Score: 0.474                 </div>             </div>             </div>`)[0];
+                popup_517c8b58845b9a7b3582fce2f865d2a0.setContent(html_d6a8f5fdde26d949d94f911f70bb9e5a);
+            
+        
+
+        geo_json_04fd1da56a02cce02d2b20089ae3df50.bindPopup(popup_517c8b58845b9a7b3582fce2f865d2a0)
+        ;
+
+        
+    
+    
+            geo_json_04fd1da56a02cce02d2b20089ae3df50.addTo(geo_json_94269c22ad87486df1970954b1d3494d);
+        
+    
+        function geo_json_d6074f5b71675e69f2edcf9e17e25058_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "#FFB366", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_d6074f5b71675e69f2edcf9e17e25058_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_d6074f5b71675e69f2edcf9e17e25058 = L.geoJson(null, {
+                onEachFeature: geo_json_d6074f5b71675e69f2edcf9e17e25058_onEachFeature,
+            
+                style: geo_json_d6074f5b71675e69f2edcf9e17e25058_styler,
+            ...{
+}
+        });
+
+        function geo_json_d6074f5b71675e69f2edcf9e17e25058_add (data) {
+            geo_json_d6074f5b71675e69f2edcf9e17e25058
+                .addData(data);
+        }
+            geo_json_d6074f5b71675e69f2edcf9e17e25058_add({"features": [{"bbox": [-73.85495039998192, 40.737430942142296, -73.85191686153418, 40.743332845164254], "geometry": {"coordinates": [[-73.85495039998192, 40.743332845164254], [-73.85462122741384, 40.742682605440265], [-73.85431657644067, 40.74208859674502], [-73.85381304548099, 40.74110310950247], [-73.85362263334342, 40.74074151199254], [-73.85334163626199, 40.74019353761051], [-73.85306510795044, 40.7396562118024], [-73.85287306037523, 40.73928820791703], [-73.85243462472967, 40.7384053833918], [-73.85204765412526, 40.73768134633179], [-73.85191686153418, 40.737430942142296]], "type": "LineString"}, "id": "2", "properties": {"BikeLnIndx": 0.19679201253095208, "BusDensInx": 0.046372430636875545, "BusStpDens": 43.45124334210406, "Street": "108 STREET", "StreetCode": "420190", "bike_length": 902.3087600243334, "heat_indx": 0.6344944807667302, "heat_mean": 109.53867712662121, "hvi_raw": 4.0, "is_priority": true, "pav_rate": 6.22876419218694, "pave_indx": 0.4190262008681177, "pop_dens_indx": 0.3560363102853168, "pop_density": 76140.54598541722, "priority": 0.3399614835875031, "tree_indx": 0.8456503026306277, "tree_pct": 14.906157281970115, "vuln_indx": 0.2}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+        var popup_67aa686d3402c3e554c292a016d6843c = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_3dc7c9a2135ebeabaa614578ad52b102 = $(`<div id="html_3dc7c9a2135ebeabaa614578ad52b102" style="width: 100.0%; height: 100.0%;">             <div style="font-family: Arial; min-width: 200px; max-width: 300px;">                 <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">                     108 STREET                 </h4>                  <div style="margin-bottom: 10px;">                     <b>Raw Values</b><br>                     • Pavement Rating: 6.2<br>                     • Average Summer Heat: 109.5 (°F)<br>                     • Tree Canopy: 14.9%<br>                     • Heat Vulnerability Index Average: 4.00<br>                     • Bus Stop Density: 43.451 Stops per Mile<br>                     • Bike Lane: 902.309 ft of Bike Lane Nearby<br>                     • Pop. Density: 76,141 People per sq mi                 </div>                  <div style="margin-bottom: 10px;">                     <b>Index Values</b><br>                     • Pavement: 0.419<br>                     • Heat: 0.634<br>                     • Tree Canopy: 0.846<br>                     • Heat Vulnerability: 0.200<br>                     • Bus Stop Density: 0.046<br>                     • Bike Lanes: 0.197<br>                     • Pop. Density: 0.356                 </div>                  <div style="font-weight: bold; color: #CC0000;">                     Priority Score: 0.340                 </div>             </div>             </div>`)[0];
+                popup_67aa686d3402c3e554c292a016d6843c.setContent(html_3dc7c9a2135ebeabaa614578ad52b102);
+            
+        
+
+        geo_json_d6074f5b71675e69f2edcf9e17e25058.bindPopup(popup_67aa686d3402c3e554c292a016d6843c)
+        ;
+
+        
+    
+    
+            geo_json_d6074f5b71675e69f2edcf9e17e25058.addTo(geo_json_94269c22ad87486df1970954b1d3494d);
+        
+    
+        function geo_json_fa5042c2a862b7f0e65273f55a2d2a5f_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "#FF9940", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_fa5042c2a862b7f0e65273f55a2d2a5f_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_fa5042c2a862b7f0e65273f55a2d2a5f = L.geoJson(null, {
+                onEachFeature: geo_json_fa5042c2a862b7f0e65273f55a2d2a5f_onEachFeature,
+            
+                style: geo_json_fa5042c2a862b7f0e65273f55a2d2a5f_styler,
+            ...{
+}
+        });
+
+        function geo_json_fa5042c2a862b7f0e65273f55a2d2a5f_add (data) {
+            geo_json_fa5042c2a862b7f0e65273f55a2d2a5f
+                .addData(data);
+        }
+            geo_json_fa5042c2a862b7f0e65273f55a2d2a5f_add({"features": [{"bbox": [-73.87365391186606, 40.7568030880553, -73.85540369999283, 40.75833960705098], "geometry": {"coordinates": [[-73.87365391186606, 40.7568030880553], [-73.87311054839807, 40.75685019692484], [-73.87221856630829, 40.756942538656816], [-73.87132396332296, 40.7570356539047], [-73.8704137205908, 40.75713172484832], [-73.86950315632542, 40.75722732986211], [-73.86848375930916, 40.75733424787663], [-73.86746337710849, 40.757440849971466], [-73.86656999055677, 40.75753483025963], [-73.86567438647563, 40.757628891059866], [-73.86461958521139, 40.75769302300846], [-73.86371502018383, 40.757724976946136], [-73.86280706497178, 40.75775828882282], [-73.86190619705579, 40.75779416756858], [-73.86099885085355, 40.75782429655954], [-73.86046165054606, 40.75784303432548], [-73.85992749082136, 40.75786340312141], [-73.85951335422462, 40.75787789155394], [-73.85888935533904, 40.7578987768563], [-73.85856142202519, 40.75791173714417], [-73.85775354588434, 40.758026574171886], [-73.85695190377795, 40.75813242586474], [-73.85560823685577, 40.758304707945555], [-73.85540369999283, 40.75833960705098]], "type": "LineString"}, "id": "3", "properties": {"BikeLnIndx": 0.046224508058751286, "BusDensInx": 0.03084682355339374, "BusStpDens": 13.476824613737937, "Street": "NORTHERN BOULEVARD", "StreetCode": "457790", "bike_length": 320.12322268018715, "heat_indx": 0.6245527433084133, "heat_mean": 109.13004301720709, "hvi_raw": 3.0000000000000004, "is_priority": true, "pav_rate": 7.96847282372863, "pave_indx": 0.2286823764962763, "pop_dens_indx": 0.2862814478265061, "pop_density": 61223.041339626136, "priority": 0.3817147662369627, "tree_indx": 0.9788886524817558, "tree_pct": 2.038805853879991, "vuln_indx": 0.4}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+        var popup_d57d874a89d0687f534cc41a3ba16974 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_9ebe461426589d5f014ff8f436ba978e = $(`<div id="html_9ebe461426589d5f014ff8f436ba978e" style="width: 100.0%; height: 100.0%;">             <div style="font-family: Arial; min-width: 200px; max-width: 300px;">                 <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">                     NORTHERN BOULEVARD                 </h4>                  <div style="margin-bottom: 10px;">                     <b>Raw Values</b><br>                     • Pavement Rating: 8.0<br>                     • Average Summer Heat: 109.1 (°F)<br>                     • Tree Canopy: 2.0%<br>                     • Heat Vulnerability Index Average: 3.00<br>                     • Bus Stop Density: 13.477 Stops per Mile<br>                     • Bike Lane: 320.123 ft of Bike Lane Nearby<br>                     • Pop. Density: 61,223 People per sq mi                 </div>                  <div style="margin-bottom: 10px;">                     <b>Index Values</b><br>                     • Pavement: 0.229<br>                     • Heat: 0.625<br>                     • Tree Canopy: 0.979<br>                     • Heat Vulnerability: 0.400<br>                     • Bus Stop Density: 0.031<br>                     • Bike Lanes: 0.046<br>                     • Pop. Density: 0.286                 </div>                  <div style="font-weight: bold; color: #CC0000;">                     Priority Score: 0.382                 </div>             </div>             </div>`)[0];
+                popup_d57d874a89d0687f534cc41a3ba16974.setContent(html_9ebe461426589d5f014ff8f436ba978e);
+            
+        
+
+        geo_json_fa5042c2a862b7f0e65273f55a2d2a5f.bindPopup(popup_d57d874a89d0687f534cc41a3ba16974)
+        ;
+
+        
+    
+    
+            geo_json_fa5042c2a862b7f0e65273f55a2d2a5f.addTo(geo_json_94269c22ad87486df1970954b1d3494d);
+        
+    
+        function geo_json_966871443e174208095c0152496881ea_styler(feature) {
+            switch(feature.id) {
+                default:
+                    return {"color": "#FF9940", "opacity": 0.8, "weight": 3};
+            }
+        }
+
+        function geo_json_966871443e174208095c0152496881ea_onEachFeature(feature, layer) {
+            layer.on({
+            });
+        };
+        var geo_json_966871443e174208095c0152496881ea = L.geoJson(null, {
+                onEachFeature: geo_json_966871443e174208095c0152496881ea_onEachFeature,
+            
+                style: geo_json_966871443e174208095c0152496881ea_styler,
+            ...{
+}
+        });
+
+        function geo_json_966871443e174208095c0152496881ea_add (data) {
+            geo_json_966871443e174208095c0152496881ea
+                .addData(data);
+        }
+            geo_json_966871443e174208095c0152496881ea_add({"features": [{"bbox": [-73.86175074395331, 40.7499668821706, -73.85583499723649, 40.75157655883895], "geometry": {"coordinates": [[-73.86175074395331, 40.7499668821706], [-73.86111710744994, 40.75002351799652], [-73.85876328550013, 40.75071625996564], [-73.85583499723649, 40.75157655883895]], "type": "LineString"}, "id": "4", "properties": {"BikeLnIndx": 0.0, "BusDensInx": 0.0, "BusStpDens": 18.145796063492668, "Street": "ROOSEVELT AVENUE", "StreetCode": "461090", "bike_length": 141.39116388046423, "heat_indx": 0.6140698296127535, "heat_mean": 108.69916500216684, "hvi_raw": 3.672803450558665, "is_priority": true, "pav_rate": 6.253612114942639, "pave_indx": 0.4162653205619291, "pop_dens_indx": 0.4257047065858198, "pop_density": 91039.55931357406, "priority": 0.3643007649824497, "tree_indx": 1.0, "tree_pct": 0.0, "vuln_indx": 0.2654393098882673}, "type": "Feature"}], "type": "FeatureCollection"});
+
+        
+    
+        var popup_a7a16733be56ce3a7154c478ea8dfe5a = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_7fb27e7876f1183a820b546f5bcd4164 = $(`<div id="html_7fb27e7876f1183a820b546f5bcd4164" style="width: 100.0%; height: 100.0%;">             <div style="font-family: Arial; min-width: 200px; max-width: 300px;">                 <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">                     ROOSEVELT AVENUE                 </h4>                  <div style="margin-bottom: 10px;">                     <b>Raw Values</b><br>                     • Pavement Rating: 6.3<br>                     • Average Summer Heat: 108.7 (°F)<br>                     • Tree Canopy: 0.0%<br>                     • Heat Vulnerability Index Average: 3.67<br>                     • Bus Stop Density: 18.146 Stops per Mile<br>                     • Bike Lane: 141.391 ft of Bike Lane Nearby<br>                     • Pop. Density: 91,040 People per sq mi                 </div>                  <div style="margin-bottom: 10px;">                     <b>Index Values</b><br>                     • Pavement: 0.416<br>                     • Heat: 0.614<br>                     • Tree Canopy: 1.000<br>                     • Heat Vulnerability: 0.265<br>                     • Bus Stop Density: 0.000<br>                     • Bike Lanes: 0.000<br>                     • Pop. Density: 0.426                 </div>                  <div style="font-weight: bold; color: #CC0000;">                     Priority Score: 0.364                 </div>             </div>             </div>`)[0];
+                popup_a7a16733be56ce3a7154c478ea8dfe5a.setContent(html_7fb27e7876f1183a820b546f5bcd4164);
+            
+        
+
+        geo_json_966871443e174208095c0152496881ea.bindPopup(popup_a7a16733be56ce3a7154c478ea8dfe5a)
+        ;
+
+        
+    
+    
+            geo_json_966871443e174208095c0152496881ea.addTo(geo_json_94269c22ad87486df1970954b1d3494d);
+        
+    
+            geo_json_94269c22ad87486df1970954b1d3494d.addTo(map_4d4e821e8e2cf036dd4facbf7312e07f);
+        
+    
+            var layer_control_80210ce2c42514766d3d0d7b6df24b8e_layers = {
+                base_layers : {
+                    "cartodbpositron" : tile_layer_9ac2a7485a9fc375271e7907e5db98e8,
+                },
+                overlays :  {
+                    "CSC_Neighborhoods" : geo_json_6b22ed1881f1394f108f3638a9975924,
+                    "SingleScenario" : geo_json_94269c22ad87486df1970954b1d3494d,
+                },
+            };
+            let layer_control_80210ce2c42514766d3d0d7b6df24b8e = L.control.layers(
+                layer_control_80210ce2c42514766d3d0d7b6df24b8e_layers.base_layers,
+                layer_control_80210ce2c42514766d3d0d7b6df24b8e_layers.overlays,
+                {
+  "position": "topright",
+  "collapsed": false,
+  "autoZIndex": true,
+}
+            ).addTo(map_4d4e821e8e2cf036dd4facbf7312e07f);
+
+        
+</script>
+</html>
