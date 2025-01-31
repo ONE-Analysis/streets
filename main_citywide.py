@@ -145,14 +145,16 @@ def main():
 
         if exported_paths:
             # Generate webmap using exported GeoJSON files
-            webmap_path = generate_webmap(
+            webmap_paths = generate_webmap(
                 results_dict=results,
                 exported_paths=exported_paths,
                 config=config
             )
 
-            if webmap_path:
-                print(f"Successfully generated webmap at: {webmap_path}")
+            if webmap_paths:
+                print("\nSuccessfully generated webmaps at:")
+                for path in webmap_paths:
+                    print(f"- {path}")
             else:
                 print("Warning: Webmap generation failed")
         else:

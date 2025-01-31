@@ -25,13 +25,15 @@ class CoolPavementConfig:
 
         # Specific parameters for each analysis type
         citywide_specific = {
-            'number_of_top_roads': 200,
-            'min_segment_length': 1500
+            'number_of_top_roads': 200,     # This will select top 200 segments citywide
+            'min_segment_length': 1500,     # Minimum segment length in feet
+            'priority_threshold': 200        # Explicitly set the priority threshold
         }
 
         neighborhood_specific = {
-            'number_of_top_roads': 10,
-            'min_segment_length': 1000
+            'number_of_top_roads': 50,      # This will select top 10 segments per neighborhood
+            'min_segment_length': 1000,     # Minimum segment length in feet
+            'priority_threshold': 50         # Explicitly set the priority threshold
         }
 
         # Set analysis parameters based on analysis type

@@ -1549,7 +1549,7 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
 def generate_webmap(results_dict, exported_paths, config):
     """Generate the webmap using exported GeoJSON files."""
     try:
-        print("\nGenerating interactive HTML map...")
+        print("\nGenerating interactive HTML maps...")
 
         # Check if we have any valid GeoJSON files
         valid_geojsons = {
@@ -1561,9 +1561,16 @@ def generate_webmap(results_dict, exported_paths, config):
             print("Warning: No GeoJSON files found for HTML map generation")
             return None
 
-        # Generate the webmap
-        webmap_path = build_webmap(valid_geojsons, config)
-        return webmap_path
+        webmap_paths = []
+        # Generate a separate webmap for each scenario
+        for scenario_name, geojson_path in valid_geojsons.items():
+            scenario_geojsons = {scenario_name: geojson_path}
+            webmap_path = build_webmap(scenario_geojsons, config)
+            if webmap_path:
+                webmap_paths.append(webmap_path)
+                print(f"Generated webmap for {scenario_name} at: {webmap_path}")
+
+        return webmap_paths
 
     except Exception as e:
         print(f"Error generating webmap: {str(e)}")
