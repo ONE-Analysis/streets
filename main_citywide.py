@@ -15,37 +15,49 @@ from analysis_modules import (
     export_results,
     incorporate_population_density,
     build_webmap,
-    generate_webmap
+    generate_webmap,
+    process_commercial_area
 )
 
 def main():
     """
-    Main entry point for the NYC Cool Pavement Prioritization Analysis.
-    Run this script in a terminal: `python main.py`
+    Main entry point for the NYC Cool Pavement Prioritization Analysis (Citywide).
+    Usage: python main_citywide.py
     """
-    # Configure logging and suppress warnings if desired
+
+    # --------------------------------------------------------------------------
+    # Configure logging & warnings
+    # --------------------------------------------------------------------------
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s'
     )
     warnings.filterwarnings('ignore')
     
+    # --------------------------------------------------------------------------
     # 1) Setup config and classes
+    # --------------------------------------------------------------------------
     logging.info("Initializing configuration and processors...")
     config = CoolPavementConfig(analysis_type='citywide')
     raster_processor = OptimizedRasterProcessing()
 
+    # --------------------------------------------------------------------------
     # 2) Load and preprocess roads
+    # --------------------------------------------------------------------------
     logging.info("\n=== STEP 1: Loading and preprocessing road network ===")
     roads = load_and_preprocess_roads(config)
     logging.info(f"Preprocessed road network: {len(roads)} segments")
 
+    # --------------------------------------------------------------------------
     # 3) Process basic attributes (pavement, bike lanes, vulnerability)
+    # --------------------------------------------------------------------------
     logging.info("\n=== STEP 2: Processing basic attributes (pavement, bike lanes, vulnerability) ===")
     roads = DataProcessors.batch_process_all(roads, config.input_dir)
     logging.info("Basic attributes processing complete")
 
+    # --------------------------------------------------------------------------
     # 4) Process temperature data
+    # --------------------------------------------------------------------------
     print("\nProcessing temperature data...")
     temp_raster_path = os.path.join(config.input_dir, 'Landsat9_ThermalComposite_ST_B10_2020-2023.tif')
     if not os.path.exists(temp_raster_path):
@@ -62,7 +74,9 @@ def main():
     print(f"heat_indx range: {roads['heat_indx'].min():.3f} - {roads['heat_indx'].max():.3f}")
     print(f"Missing values: {roads[['heat_mean', 'heat_indx']].isna().sum().to_dict()}")
 
+    # --------------------------------------------------------------------------
     # 5) Process tree canopy data
+    # --------------------------------------------------------------------------
     print("\nProcessing tree canopy data...")
     canopy_raster_path = os.path.join(config.input_dir, 'NYC_TreeCanopy.tif')
     if not os.path.exists(canopy_raster_path):
@@ -79,7 +93,9 @@ def main():
     else:
         print("Warning: tree_pct or tree_indx columns not found in the results")
 
+    # --------------------------------------------------------------------------
     # 6) Process bus stops
+    # --------------------------------------------------------------------------
     print("\nProcessing bus stop proximity...")
     roads = process_bus_stops(roads, config.input_dir, config.crs)
     log_memory_usage()
@@ -89,31 +105,44 @@ def main():
     print(f"BusDensInx range: {roads['BusDensInx'].min():.3f} - {roads['BusDensInx'].max():.3f}")
     print(f"Missing values: {roads[['BusStpDens', 'BusDensInx']].isna().sum().to_dict()}")
 
-    # 7) Incorporate population density (downloads TIGER data & Census, saves GeoJSON, etc.)
+    # --------------------------------------------------------------------------
+    # 7) Incorporate population density
+    # --------------------------------------------------------------------------
     logging.info("\nIncorporating population density...")
     roads = incorporate_population_density(
         roads,
         config.input_dir,
         buffer_ft=config.analysis_params["pop_buffer_ft"]  # e.g. 1000
-        # If needed, add census_api_key=...
     )
     log_memory_usage()
 
+    # Step 7b: Incorporate "Commercial Area" around each road
+    print("\nProcessing commercial activity areas...")
+    com_buffer_ft = config.analysis_params['pop_buffer_ft']  # e.g., 1000
+    roads = process_commercial_area(roads, config.input_dir, com_buffer_ft)
+
+    # Create ComIndex using DataProcessors class
+    # We'll use standard normalization (not reversed, not V-shaped)
+    data_processor = DataProcessors()
+    roads['ComIndex'] = data_processor.normalize_to_index(roads['ComArea'], attribute_type='standard')
+
+    print(f"ComIndex stats: min={roads['ComIndex'].min():.3f}, max={roads['ComIndex'].max():.3f}, mean={roads['ComIndex'].mean():.3f}")
+
+    # --------------------------------------------------------------------------
     # 8) Merge road segments
+    # --------------------------------------------------------------------------
     print("\nMerging street segments...")
     merged_roads = merge_street_segments(roads, config.analysis_params["min_segment_length"])
     log_memory_usage()
 
-    # 9) Calculate final priority
+    # --------------------------------------------------------------------------
+    # 9) Calculate final priority (all scenarios from config.weight_scenarios)
+    # --------------------------------------------------------------------------
     print("\nCalculating final priorities for all scenarios...")
-
-    # Initialize analyzer with scenarios from the config
     analyzer = FinalAnalysis(config.weight_scenarios)
-
-    # Run analysis for all scenarios
     results = analyzer.run_all_scenarios(merged_roads, config.analysis_params)
 
-    # Print summary stats
+    # Print summary stats for each scenario
     for scenario_name, scenario_data in results.items():
         if scenario_name == 'ALL':
             print(f"\n=== Summary for ALL Scenario ===")
@@ -133,24 +162,25 @@ def main():
             print(f"High priority segments: {priority_count} ({(priority_count/total_count)*100:.1f}%)")
             print(f"Mean priority score: {scenario_data['priority'].mean():.3f}")
 
-    # Print columns in merged_roads
+    # Print columns in merged_roads (debug)
     print("\nColumns in merged_roads:", list(merged_roads.columns))
 
-
-    # 10) Export final results and generate webmap
+    # --------------------------------------------------------------------------
+    # 10) Export final results (all segments) & generate scenario webmaps
+    # --------------------------------------------------------------------------
     print("\nExporting results and generating webmap...")
     try:
-        # Export results to GeoJSON
+        # This calls your modified export_results() which now exports ALL segments
+        # to "all_segments_{scenario_name}.geojson"
         exported_paths = export_results(results_dict=results, config=config)
 
         if exported_paths:
-            # Generate webmap using exported GeoJSON files
+            # Generate webmap using exported GeoJSON files (each scenario)
             webmap_paths = generate_webmap(
                 results_dict=results,
                 exported_paths=exported_paths,
                 config=config
             )
-
             if webmap_paths:
                 print("\nSuccessfully generated webmaps at:")
                 for path in webmap_paths:

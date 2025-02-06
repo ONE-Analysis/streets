@@ -18,7 +18,7 @@ class CoolPavementConfig:
         # Base parameters that are same for both analyses
         base_params = {
             'min_vulnerability': 4,
-            'min_street_width': 35,
+            'min_street_width': 15,
             'rail_buffer': 25,
             'pop_buffer_ft': 1000
         }
@@ -33,7 +33,7 @@ class CoolPavementConfig:
         neighborhood_specific = {
             'number_of_top_roads': 50,      # This will select top 10 segments per neighborhood
             'min_segment_length': 1000,     # Minimum segment length in feet
-            'priority_threshold': 50         # Explicitly set the priority threshold
+            'priority_threshold': 50        # Explicitly set the priority threshold
         }
 
         # Set analysis parameters based on analysis type
@@ -46,24 +46,26 @@ class CoolPavementConfig:
         # Weight scenarios
         self.weight_scenarios = {
             'CoolPavement': {
-                'PavementIndex': 0.25,      # uses 'v' shaped suitability
-                'HeatHazIndex': 0.1,        # raw heat values from summers 2021-2024
-                'TreeCanopyIndex': 0.15,    # assessment of tree canopy percentage
+                'PavementIndex': 0.25,           # uses 'v' shaped suitability
+                'HeatHazIndex': 0.1,             # raw heat values from summers 2021-2024
+                'TreeCanopyIndex': 0.15,         # assessment of tree canopy percentage
                 'HeatVulnerabilityIndex': 0.15,  # heat vulnerability index values
-                'BusDensInx': 0.05,         # bus stops per mile
-                'BikeLnIndx': 0.05,         # bike lane length per mile
-                'PedIndex': 0,              # road prioritization in NYC Pedestrian Mobility Plan
-                'PopDensity': 0.25          # people per square mile within 1000' radius
+                'BusDensInx': 0.05,              # bus stops per mile
+                'BikeLnIndx': 0.05,              # bike lane length per mile
+                'PedIndex': 0,                   # road prioritization in NYC Pedestrian Mobility Plan
+                'pop_dens_indx': 0.1,            # people per square mile within 1000' buffer
+                'ComIndex': 0.15                 # commercial space within 1000' buffer
             },
             'CoolCorridors': {
-                'PavementIndex': 0,         # uses 'v' shaped suitability
-                'HeatHazIndex': 0.1,        # raw heat values from summers 2021-2024
-                'TreeCanopyIndex': 0.15,    # assessment of tree canopy percentage
-                'HeatVulnerabilityIndex': 0.15,  # heat vulnerability index values
-                'BusDensInx': 0.1,          # bus stops per mile
-                'BikeLnIndx': 0.1,          # bike lane length per mile
-                'PedIndex': 0.15,           # road prioritization in NYC Pedestrian Mobility Plan
-                'PopDensity': 0.25          # people per square mile within 1000' radius
+                'PavementIndex': 0,             # uses 'v' shaped suitability
+                'HeatHazIndex': 0,              # raw heat values from summers 2021-2024
+                'TreeCanopyIndex': 0.25,        # assessment of tree canopy percentage
+                'HeatVulnerabilityIndex': 0,    # heat vulnerability index values
+                'BusDensInx': 0.15,             # bus stops per mile
+                'BikeLnIndx': 0.15,             # bike lane length per mile
+                'PedIndex': 0.2,                # road prioritization in NYC Pedestrian Mobility Plan
+                'pop_dens_indx': 0.25,          # people per square mile within 1000' buffer
+                'ComIndex': 0                   # commercial space within 1000' buffer
             }
         }
 

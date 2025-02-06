@@ -28,24 +28,45 @@ def load_and_preprocess_roads(config):
             roads[col] = roads[col].str.strip()
 
         # Step-by-step filtering
-        # 1) Filter by FeatureTyp
-        roads_feature = roads[roads['FeatureTyp'].isin(['0', 'C'])]
-        print(f"\nAfter FeatureTyp filter: {len(roads_feature)} roads remaining")
+        # =====================================
+        # Filter by FeatureTyp
+        # =====================================
+        roads = roads[roads['FeatureTyp'].isin(['0', 'C'])]
+        print(f"\nAfter FeatureTyp filter: {len(roads)} roads remaining")
 
-        # 2) Filter by RW_TYPE
-        roads_rw = roads_feature[roads_feature['RW_TYPE'] == '1']
-        print(f"After RW_TYPE filter: {len(roads_rw)} roads remaining")
+        # =====================================
+        # Filter by RW_TYPE
+        # =====================================
+        # just roads
+        roads = roads[roads['RW_TYPE'] == '1']
+        print(f"After RW_TYPE filter: {len(roads)} roads remaining")
+        
+        #Highways and roads
+        # roads = roads[roads['RW_TYPE'].isin(['1', '2'])]
+        # print(f"After RW_TYPE filter: {len(roads)} roads remaining")
 
-        # 3) Filter by Status
-        roads_status = roads_rw[roads_rw['Status'] != '4']
-        print(f"After Status filter: {len(roads_status)} roads remaining")
+        # =====================================
+        # Filter by Status
+        # =====================================
+        roads = roads[roads['Status'] != '4']
+        print(f"After Status filter: {len(roads)} roads remaining")
 
-        # 4) Filter by StreetWidth_Min
+        # =====================================
+        # Filter by Carto_Display_Level
+        # =====================================
+        # roads = roads[roads['Carto_Display_Level'] == '10']
+        # print(f"After Carto_Display_Level filter: {len(roads)} roads remaining")
+
+        # =====================================
+        # Filter by StreetWidth_Min
+        # =====================================
         min_street_width = config.analysis_params['min_street_width']
-        roads_width = roads_status[roads_status['StreetWidth_Min'] >= min_street_width]
+        roads_width = roads[roads['StreetWidth_Min'] >= min_street_width]
         print(f"After StreetWidth_Min filter: {len(roads_width)} roads remaining")
 
-        # 5) Filter by HVI intersection
+        # =====================================
+        # Filter by HVI intersection
+        # =====================================
         vuln_path = os.path.join(config.input_dir, 'HeatVulnerabilityIndex.geojson')
         if os.path.exists(vuln_path):
             print("Loading vulnerability data for filtering...")
@@ -93,7 +114,83 @@ def load_and_preprocess_roads(config):
             print(f"Warning: Vulnerability file not found at {vuln_path}. Skipping HVI filter.")
             roads_result = roads_width
 
+        # =====================================
+        # FOZ Intersection Filter
+        # =====================================
+        # foz_path = os.path.join(config.input_dir, 'FOZ_NYC_Merged.geojson')
+        # if os.path.exists(foz_path):
+        #     print("Loading FOZ data for filtering...")
+        #     foz = gpd.read_file(foz_path)
+
+        #     if len(foz) > 0:
+        #         # Ensure same CRS
+        #         if foz.crs != roads_result.crs:
+        #             foz = foz.to_crs(roads_result.crs)
+
+        #         print(f"Filtering for roads intersecting with FOZ areas...")
+        #         print(f"Number of FOZ polygons: {len(foz)}")
+
+        #         # Create spatial index for efficiency
+        #         foz_spatial_index = foz.sindex
+
+        #         # Function to check if a road intersects with any FOZ polygon
+        #         def intersects_foz(road_geom):
+        #             possible_matches_idx = list(foz_spatial_index.intersection(road_geom.bounds))
+        #             if not possible_matches_idx:
+        #                 return False
+        #             possible_matches = foz.iloc[possible_matches_idx]
+        #             return any(possible_matches.intersects(road_geom))
+
+        #         # Apply the filter
+        #         roads_foz = roads_result[roads_result.geometry.apply(intersects_foz)]
+        #         print(f"After FOZ intersection filter: {len(roads_foz)} roads remaining")
+
+        #         roads_result = roads_foz
+        #     else:
+        #         print(f"Warning: No FOZ areas found. Skipping FOZ filter.")
+        # else:
+        #     print(f"Warning: FOZ file not found at {foz_path}. Skipping FOZ filter.")
+
+        # =====================================
+        # Persistent Poverty Intersection Filter
+        # =====================================
+        # poverty_path = os.path.join(config.input_dir, 'nyc_persistent_poverty.geojson')
+        # if os.path.exists(poverty_path):
+        #     print("Loading persistent poverty data for filtering...")
+        #     poverty = gpd.read_file(poverty_path)
+
+        #     if len(poverty) > 0:
+        #         # Ensure same CRS
+        #         if poverty.crs != roads_result.crs:
+        #             poverty = poverty.to_crs(roads_result.crs)
+
+        #         print(f"Filtering for roads intersecting with persistent poverty areas...")
+        #         print(f"Number of poverty area polygons: {len(poverty)}")
+
+        #         # Create spatial index for efficiency
+        #         poverty_spatial_index = poverty.sindex
+
+        #         # Function to check if a road intersects with any poverty polygon
+        #         def intersects_poverty(road_geom):
+        #             possible_matches_idx = list(poverty_spatial_index.intersection(road_geom.bounds))
+        #             if not possible_matches_idx:
+        #                 return False
+        #             possible_matches = poverty.iloc[possible_matches_idx]
+        #             return any(possible_matches.intersects(road_geom))
+
+        #         # Apply the filter
+        #         roads_poverty = roads_result[roads_result.geometry.apply(intersects_poverty)]
+        #         print(f"After persistent poverty intersection filter: {len(roads_poverty)} roads remaining")
+
+        #         roads_result = roads_poverty
+        #     else:
+        #         print(f"Warning: No persistent poverty areas found. Skipping poverty filter.")
+        # else:
+        #     print(f"Warning: Persistent poverty file not found at {poverty_path}. Skipping poverty filter.")
+
+        # =====================================
         # Load and merge pedestrian demand data
+        # =====================================
         print("\nLoading pedestrian demand data...")
         ped_demand = pd.read_csv(os.path.join(config.input_dir, 
             'Pedestrian_Mobility_Plan_Pedestrian_Demand_20250117.csv'))
@@ -125,7 +222,8 @@ def load_and_preprocess_roads(config):
         print(f"Error in road network preprocessing: {str(e)}")
         raise
 
-def process_bike_lanes(roads_gdf, buffer_distance=10):
+
+def process_bike_lanes(roads_gdf, buffer_distance=50):
     """
     Process bike lanes by calculating the length of nearby bike lanes for each road segment,
     then derive 'bike_ln_per_mile' based on road length.

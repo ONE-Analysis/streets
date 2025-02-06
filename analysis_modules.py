@@ -44,6 +44,7 @@ class DataProcessors:
     def normalize_to_index(series, attribute_type):
         """
         Normalize a series to an index between 0 and 1 based on attribute type.
+        Uses 5th and 95th percentiles to handle outliers.
         - 'heat', 'canopy' => reversed normalization
         - 'pavement' => V-shaped normalization where extremes are good
         """
@@ -56,24 +57,45 @@ class DataProcessors:
             if valid_data.nunique() <= 1:
                 return pd.Series(0.5, index=series.index)
 
+            # Calculate percentiles for outlier handling
+            p05 = valid_data.quantile(0.05)
+            p95 = valid_data.quantile(0.95)
+            
             if attribute_type == 'pavement':
                 # V-shaped normalization for pavement
                 # Assuming rating scale is 0-10
                 middle_point = 5.0
                 distances = abs(valid_data - middle_point)
-                max_possible_distance = max(middle_point, 10 - middle_point)
-                normalized = distances / max_possible_distance
-                normalized = normalized.clip(0, 1)  # ensure [0, 1]
+                
+                # Handle outliers in distances
+                dist_p05 = distances.quantile(0.05)
+                dist_p95 = distances.quantile(0.95)
+                
+                if dist_p95 == dist_p05:
+                    normalized = pd.Series(0.5, index=valid_data.index)
+                else:
+                    # Clip distances to remove outliers
+                    clipped_distances = distances.clip(dist_p05, dist_p95)
+                    # Normalize clipped distances
+                    normalized = (clipped_distances - dist_p05) / (dist_p95 - dist_p05)
+                
             else:
-                # Standard normalization
-                min_val = valid_data.min()
-                max_val = valid_data.max()
-                normalized = (valid_data - min_val) / (max_val - min_val)
+                # Standard normalization with outlier handling
+                if p95 == p05:
+                    normalized = pd.Series(0.5, index=valid_data.index)
+                else:
+                    # Clip values to remove outliers
+                    clipped_data = valid_data.clip(p05, p95)
+                    # Normalize clipped values
+                    normalized = (clipped_data - p05) / (p95 - p05)
 
                 # Reverse for 'heat', 'canopy'
                 if attribute_type in ['heat', 'canopy']:
                     normalized = 1 - normalized
 
+            # Ensure values are within [0, 1]
+            normalized = normalized.clip(0, 1)
+            
             result = pd.Series(normalized, index=valid_data.index)
             # Fill any missing or NaN with 0.5
             result = result.reindex(series.index).fillna(0.5)
@@ -116,7 +138,7 @@ class DataProcessors:
             return {'hvi': 0.0, 'intersections': 0, 'length': 0}
 
     @staticmethod
-    def process_bike_lanes(roads_gdf, buffer_distance=10):
+    def process_bike_lanes(roads_gdf, buffer_distance=50):
         """
         Process bike lanes by calculating the length of nearby bike lanes for each road segment,
         then derive 'bike_ln_per_mile' based on road length.
@@ -271,7 +293,7 @@ class DataProcessors:
             # ------------------------------------------------------
             # 3) Process Bike Lanes
             # ------------------------------------------------------
-            roads = cls.process_bike_lanes(roads, buffer_distance=10)
+            roads = cls.process_bike_lanes(roads, buffer_distance=50)
 
             # Create a 0-1 BikeLnIndx by min-max normalizing 'bike_ln_per_mile'
             if 'bike_ln_per_mile' in roads.columns:
@@ -659,49 +681,47 @@ class OptimizedRasterProcessing:
 def process_bus_stops(roads, input_dir, crs):
     """
     Calculate bus stop density within 50ft buffer of each road segment,
-    then create normalized BusDensInx based on stops per 100ft of segment length.
+    then create normalized BusDensInx based on stops per mile of segment length.
+    Uses DataProcessors class for normalization with outlier handling.
     """
     import geopandas as gpd
     import pandas as pd
-
+    import os
+    
     try:
         print("Processing bus stop density...")
         bus_stops = gpd.read_file(os.path.join(input_dir, 'BusStops.geojson'))
         bus_stops = bus_stops.to_crs(crs)
         print(f"Loaded {len(bus_stops)} bus stops")
-
+        
         # Create 50ft buffer around each road segment
         roads['buffer'] = roads.geometry.buffer(50)
-
+        
         def count_bus_stops_in_buffer(buffer_geom):
             return sum(bus_stops.geometry.intersects(buffer_geom))
-
+        
         print("Calculating bus stop counts within buffers...")
         roads['bus_stop_count'] = roads['buffer'].apply(count_bus_stops_in_buffer)
-
+        
         # Calculate segment lengths in feet and bus stop density per mile
         roads['segment_length'] = roads.geometry.length
         roads['BusStpDens'] = (roads['bus_stop_count'] / roads['segment_length']) * 5280
-
-        # Create normalized index
-        max_dens = roads['BusStpDens'].max()
-        min_dens = roads['BusStpDens'].min()
-
-        if max_dens == min_dens:
-            roads['BusDensInx'] = 1.0
-        else:
-            roads['BusDensInx'] = (roads['BusStpDens'] - min_dens) / (max_dens - min_dens)
-
+        
+        # Create normalized index using DataProcessors
+        data_processor = DataProcessors()
+        roads['BusDensInx'] = data_processor.normalize_to_index(roads['BusStpDens'], attribute_type='standard')
+        
         # Clean up intermediate columns
         roads = roads.drop(columns=['buffer'])
-
+        
         print(f"Bus stop density processing complete")
-        print(f"Density range: {min_dens:.4f} to {max_dens:.4f} stops per mile")
+        print(f"Density range: {roads['BusStpDens'].min():.4f} to {roads['BusStpDens'].max():.4f} stops per mile")
+        print(f"Normalized index range: {roads['BusDensInx'].min():.4f} to {roads['BusDensInx'].max():.4f}")
         print(f"Mean density: {roads['BusStpDens'].mean():.4f} stops per mile")
         print(f"Total bus stops counted: {roads['bus_stop_count'].sum()}")
-
+        
         return roads
-
+        
     except Exception as e:
         print(f"Error processing bus stops: {str(e)}")
         raise
@@ -822,6 +842,95 @@ def estimate_population_density(roads, blocks_gdf, buffer_ft=1000):
 
     return roads
 
+def process_commercial_area(roads_gdf, input_dir, buffer_distance):
+    """
+    Summarize the commercial area density (ComArea) around each road segment within 'buffer_distance' (in feet).
+    Updates roads_gdf with a new column 'ComArea', which is the SUM of ComArea from intersecting polygons
+    divided by the length of the road segment to get commercial area per foot of road.
+    
+    Args:
+        roads_gdf      (GeoDataFrame): Road segments (EPSG:2263).
+        input_dir      (str): Directory path with PLUTO_ComMix.geojson.
+        buffer_distance(float): Distance in feet to buffer roads.
+    Returns:
+        roads_gdf (GeoDataFrame): Updated with 'ComArea' column (commercial area per foot of road).
+    """
+    import os
+    import geopandas as gpd
+    import numpy as np
+    
+    # 1) Load the polygons
+    com_path = os.path.join(input_dir, 'PLUTO_ComMix.geojson')
+    if not os.path.exists(com_path):
+        print(f"Warning: {com_path} not found. Setting 'ComArea' = 0.")
+        roads_gdf['ComArea'] = 0.0
+        return roads_gdf
+    
+    print(f"Loading Commercial Mix polygons from {com_path}...")
+    com_gdf = gpd.read_file(com_path)
+    
+    # Ensure correct CRS
+    if com_gdf.crs != roads_gdf.crs:
+        com_gdf = com_gdf.to_crs(roads_gdf.crs)
+    
+    # Confirm 'ComArea' field is present
+    if 'ComArea' not in com_gdf.columns:
+        print("Warning: 'ComArea' field not found in PLUTO_ComMix.geojson. Setting to 0.")
+        com_gdf['ComArea'] = 0.0
+    
+    # 2) Create a spatial index for faster bounding-box queries
+    com_sindex = com_gdf.sindex
+    
+    # 3) Calculate segment lengths
+    roads_gdf['segment_length'] = roads_gdf.geometry.length
+    
+    # 4) For each road, buffer by buffer_distance and sum the ComArea of intersecting polygons
+    summed_areas = []
+    for idx, row in roads_gdf.iterrows():
+        geom = row.geometry
+        if geom is None or geom.is_empty:
+            summed_areas.append(0.0)
+            continue
+            
+        # Create the buffer around the road
+        road_buffer = geom.buffer(buffer_distance)
+        
+        # Quickly get candidate polygons by bounding box intersection
+        candidate_idxs = list(com_sindex.intersection(road_buffer.bounds))
+        if not candidate_idxs:
+            summed_areas.append(0.0)
+            continue
+            
+        candidate_polys = com_gdf.iloc[candidate_idxs]
+        
+        # Precisely filter by intersection
+        intersecting_polys = candidate_polys[candidate_polys.geometry.intersects(road_buffer)]
+        
+        # Sum the entire ComArea of those intersecting polygons
+        total_com_area = intersecting_polys['ComArea'].sum()
+        
+        # Normalize by segment length
+        segment_length = row['segment_length']
+        if segment_length > 0:  # Prevent division by zero
+            normalized_com_area = total_com_area / segment_length
+        else:
+            normalized_com_area = 0.0
+            
+        summed_areas.append(normalized_com_area)
+    
+    # 5) Attach results to roads_gdf
+    roads_gdf['ComArea'] = summed_areas
+    
+    # 6) Debug info
+    print(f"\nCalculated ComArea per foot for {len(roads_gdf)} roads (buffer={buffer_distance} ft).")
+    print(f"ComArea density stats -> min={roads_gdf['ComArea'].min():.3f}, "
+          f"max={roads_gdf['ComArea'].max():.3f}, "
+          f"mean={roads_gdf['ComArea'].mean():.3f}")
+    
+    # 7) Clean up
+    roads_gdf = roads_gdf.drop(columns=['segment_length'])
+    
+    return roads_gdf
 
 def merge_street_segments(roads, min_segment_length):
     """
@@ -859,8 +968,9 @@ def merge_street_segments(roads, min_segment_length):
             'pave_indx', 'heat_indx', 'tree_indx', 'vuln_indx', 'pop_dens_indx',
             'bike_ln_per_mile'
         ]
+
         sum_cols = [
-            'vuln_length', 'intersections', 'bus_stop_count', 'bike_length'
+            'vuln_length', 'intersections', 'bus_stop_count', 'bike_length', 'ComArea'
         ]
 
         # We'll skip geometry, StreetCode, etc. from these dicts since we handle them separately
@@ -988,6 +1098,19 @@ def merge_street_segments(roads, min_segment_length):
                 # If all segments have the same bike_ln_per_mile
                 merged_gdf['BikeLnIndx'] = 0.0
 
+        # Recompute ComIndex by min-max in the merged_gdf
+        if 'ComArea' in merged_gdf.columns:
+            min_val = merged_gdf['ComArea'].min()
+            max_val = merged_gdf['ComArea'].max()
+            if max_val > min_val:
+                merged_gdf['ComIndex'] = (
+                    (merged_gdf['ComArea'] - min_val) / (max_val - min_val)
+                )
+            else:
+                merged_gdf['ComIndex'] = 0.0
+        else:
+            merged_gdf['ComIndex'] = 0.0
+
         # Print helpful stats
         if 'BusStpDens' in merged_gdf.columns:
             print(f"\nBus stop density statistics:")
@@ -1060,7 +1183,9 @@ class FinalAnalysis:
             'vuln_indx': weights.get('HeatVulnerabilityIndex', 0),
             'BikeLnIndx': weights.get('BikeLnIndx', 0),
             'PedIndex': weights.get('PedIndex', 0),
-            'pop_dens_indx': weights.get('PopDensity', 0)
+            'pop_dens_indx': weights.get('pop_dens_indx', 0),
+            'ComIndex': weights.get('ComIndex', 0)
+
         }
 
         # Check sum
@@ -1108,7 +1233,6 @@ class FinalAnalysis:
 # ------------------------------------
 
 def export_results(results_dict, config):
-    """Export analysis results to GeoJSON files with raw and index values."""
     exported_paths = {}
 
     for scenario_name, final_roads in results_dict.items():
@@ -1118,11 +1242,10 @@ def export_results(results_dict, config):
         try:
             print(f"\nProcessing exports for scenario: {scenario_name}")
 
-            # Define fields to export
             export_fields = [
                 # Basic identifiers
-                'Street', 'StreetCode',
-
+                'Street',
+                'StreetCode',
                 # Raw values
                 # 'vol_adj',         # Traffic volume
                 'pav_rate',        # Pavement rating
@@ -1133,6 +1256,7 @@ def export_results(results_dict, config):
                 'bike_length',     # Nearby bike lane length
                 'PedRank',         # Pedestrian Mobility Priority
                 'pop_density',     # Population density
+                'ComArea',         # Commercial Area
 
                 # Index values
                 # 'traf_indx',       # Traffic index
@@ -1144,6 +1268,7 @@ def export_results(results_dict, config):
                 'BikeLnIndx',      # Bike lane index (0-1)
                 'PedIndex',        # Pedestian mobility index
                 'pop_dens_indx',   # Population density index
+                'ComIndex',        # Commercial Area index
 
                 # Priority results
                 'priority',
@@ -1154,16 +1279,13 @@ def export_results(results_dict, config):
             available_fields = [f for f in export_fields if f in final_roads.columns]
 
             # Create export dataframe
-            export_gdf = final_roads[final_roads['is_priority']][
-                available_fields + ['geometry']].copy()
-
-            # Export to GeoJSON
-            output_filename = f"priority_segments_{scenario_name}.geojson"
+            export_gdf = final_roads[export_fields + ['geometry']].copy()
+            output_filename = f"all_segments_{scenario_name}.geojson"
             output_path = os.path.join(config.output_dir, output_filename)
             export_gdf.to_file(output_path, driver='GeoJSON')
 
             exported_paths[scenario_name] = output_path
-            print(f"Exported {len(export_gdf)} priority segments to {output_filename}")
+            print(f"Exported {len(export_gdf)} segments to {output_filename}")
 
         except Exception as e:
             print(f"Error exporting {scenario_name}: {str(e)}")
@@ -1173,12 +1295,16 @@ def export_results(results_dict, config):
 # ------------------------------------
 # Neighborhood Analysis
 # ------------------------------------
-
 def run_neighborhood_analysis(config):
-    """Run analysis for each neighborhood separately."""
+    """
+    Run analysis for each neighborhood separately, ensuring that each neighborhood
+    has its indices (pave_indx, heat_indx, ComIndex, etc.) re-min-maxed based on 
+    only that neighborhood's data.
+    """
     import os
     import geopandas as gpd
 
+    # Local imports from your project
     from data_preprocessing import load_and_preprocess_roads
     from analysis_modules import (
         DataProcessors,
@@ -1188,10 +1314,13 @@ def run_neighborhood_analysis(config):
         FinalAnalysis,
         export_results,
         incorporate_population_density,
-        build_webmap
+        build_webmap,
+        process_commercial_area   # if you have a separate function for ComArea
     )
 
-    # Load neighborhood boundaries
+    # -------------------------------------------------------------------------
+    # 1) Load neighborhood boundaries
+    # -------------------------------------------------------------------------
     nbhd_path = os.path.join(config.input_dir, "CSC_Neighborhoods.geojson")
     if not os.path.exists(nbhd_path):
         raise FileNotFoundError(f"Neighborhood boundaries not found at: {nbhd_path}")
@@ -1202,97 +1331,155 @@ def run_neighborhood_analysis(config):
     elif neighborhoods.crs.to_string() != "EPSG:2263":
         neighborhoods = neighborhoods.to_crs("EPSG:2263")
 
-    # Load and preprocess citywide roads
+    # -------------------------------------------------------------------------
+    # 2) Load and preprocess citywide roads (one time)
+    # -------------------------------------------------------------------------
     roads = load_and_preprocess_roads(config)
-
-    # Ensure roads are in the correct CRS
     if roads.crs is None:
         roads.set_crs("EPSG:2263", inplace=True)
     elif roads.crs.to_string() != "EPSG:2263":
         roads = roads.to_crs("EPSG:2263")
 
-    # Process all attributes for the full dataset
+    # 2A) Run your main attribute processors (pavement, bike, etc.)
     raster_processor = OptimizedRasterProcessing()
     roads = DataProcessors.batch_process_all(roads, config.input_dir)
 
-    # Process temperature
+    # 2B) Process commercial area (if applicable)
+    if hasattr(config.analysis_params, "pop_buffer_ft"):
+        buffer_ft = config.analysis_params["pop_buffer_ft"]
+    else:
+        buffer_ft = 1000  # fallback
+    roads = process_commercial_area(roads, config.input_dir, buffer_ft)
+
+    # 2C) (Optional) Citywide ComIndex, but we will re-min-max at the neighborhood level,
+    # so this step is not strictly necessary:
+    #   roads['ComIndex'] = ...
+    #   roads['heat_indx'] = ...
+    # etc. 
+    # We'll do a citywide pass if you want to see global distributions, 
+    # but final min-max will happen per neighborhood.
+
+    # 2D) Temperature
     temp_raster_path = os.path.join(config.input_dir, 'Landsat9_ThermalComposite_ST_B10_2020-2023.tif')
     roads = raster_processor.optimize_temperature_processing(roads, temp_raster_path)
-    roads['heat_indx'] = DataProcessors.normalize_to_index(roads['heat_mean'], 'temperature')
+    # If you want citywide indices, do it here, but we *will* re-min-max later
 
-    # Process tree canopy
+    # 2E) Tree canopy
     canopy_raster_path = os.path.join(config.input_dir, 'NYC_TreeCanopy.tif')
     roads = raster_processor.optimize_tree_canopy_processing(roads, canopy_raster_path)
 
-    # Process bus stops
+    # 2F) Bus stops
     roads = process_bus_stops(roads, config.input_dir, config.crs)
 
-    # Process population density
+    # 2G) Population density
     roads = incorporate_population_density(
         roads,
         config.input_dir,
         buffer_ft=config.analysis_params["pop_buffer_ft"]
     )
 
-    # Initialize analyzer
+    # -------------------------------------------------------------------------
+    # 3) Initialize final analyzer
+    # -------------------------------------------------------------------------
     analyzer = FinalAnalysis(config.weight_scenarios)
 
-    # Process each neighborhood
+    # -------------------------------------------------------------------------
+    # 4) Process each neighborhood
+    # -------------------------------------------------------------------------
     for idx, nbhd_row in neighborhoods.iterrows():
         nbhd_name = nbhd_row['Name']
         print(f"\nProcessing neighborhood: {nbhd_name}")
 
-        # Create spatial index for efficiency
+        # 4A) Clip roads to this neighborhood
         roads_sindex = roads.sindex
-
-        # Get candidate roads that might intersect with neighborhood
         nbhd_bounds = nbhd_row.geometry.bounds
         candidate_indices = list(roads_sindex.intersection(nbhd_bounds))
         candidate_roads = roads.iloc[candidate_indices]
 
-        # Perform actual intersection check
         nbhd_roads = gpd.clip(candidate_roads, nbhd_row.geometry)
-
         if len(nbhd_roads) == 0:
             print(f"No roads found in neighborhood {nbhd_name}, skipping...")
             continue
-
         print(f"Found {len(nbhd_roads)} road segments in {nbhd_name}")
 
-        # Merge segments
+        # 4B) Merge segments within this neighborhood
         nbhd_roads = merge_street_segments(nbhd_roads, config.analysis_params["min_segment_length"])
-        print(f"After merging: {len(nbhd_roads)} segments")
+        print(f"After merging: {len(nbhd_roads)} segments for {nbhd_name}")
 
-        # Run analysis
+        # ---------------------------------------------------------------------
+        # 4C) Re-min-max each relevant index *within* the neighborhood
+        #     This ensures each index is 0-1 based on neighborhood's data only.
+        # ---------------------------------------------------------------------
+        # Use your DataProcessors, or do it inline. Let's do a direct approach:
+        from numpy import nanmin, nanmax
+
+        # Example: heat_mean -> heat_indx
+        if 'heat_mean' in nbhd_roads.columns:
+            nbhd_roads['heat_indx'] = DataProcessors.normalize_to_index(nbhd_roads['heat_mean'], 'temperature')
+
+        # Pavement rating -> pave_indx
+        if 'pav_rate' in nbhd_roads.columns:
+            nbhd_roads['pave_indx'] = DataProcessors.normalize_to_index(nbhd_roads['pav_rate'], 'pavement')
+
+        # Tree canopy -> tree_indx
+        if 'tree_pct' in nbhd_roads.columns:
+            nbhd_roads['tree_indx'] = DataProcessors.normalize_to_index(nbhd_roads['tree_pct'], 'canopy')
+
+        # Heat vulnerability -> vuln_indx (if you store raw in 'hvi_raw')
+        if 'hvi_raw' in nbhd_roads.columns:
+            nbhd_roads['vuln_indx'] = DataProcessors.normalize_to_index(nbhd_roads['hvi_raw'], 'basic')  # or custom
+
+        # Bus stops -> BusDensInx
+        if 'BusStpDens' in nbhd_roads.columns:
+            # Use normal 0-1 min-max
+            nbhd_roads['BusDensInx'] = DataProcessors.normalize_to_index(nbhd_roads['BusStpDens'], 'basic')
+
+        # Bike lanes -> BikeLnIndx
+        if 'bike_ln_per_mile' in nbhd_roads.columns:
+            nbhd_roads['BikeLnIndx'] = DataProcessors.normalize_to_index(nbhd_roads['bike_ln_per_mile'], 'basic')
+
+        # Population density -> pop_dens_indx
+        if 'pop_density' in nbhd_roads.columns:
+            nbhd_roads['pop_dens_indx'] = DataProcessors.normalize_to_index(nbhd_roads['pop_density'], 'popdensity')
+
+        # Commercial Area -> ComIndex
+        if 'ComArea' in nbhd_roads.columns:
+            nbhd_roads['ComIndex'] = DataProcessors.normalize_to_index(nbhd_roads['ComArea'], 'basic')
+
+        # (Add any other fields you want to re-min-max, e.g., PedRank -> PedIndex, etc.)
+
+        # ---------------------------------------------------------------------
+        # 4D) Now run final priority analysis
+        # ---------------------------------------------------------------------
         nbhd_results = analyzer.run_all_scenarios(nbhd_roads, config.analysis_params)
 
-        # Create neighborhood-specific output directory
+        # 4E) Create neighborhood-specific output directory
         nbhd_output_dir = os.path.join(config.output_dir, nbhd_name.replace(" ", "_"))
         os.makedirs(nbhd_output_dir, exist_ok=True)
 
-        # Export results
+        # 4F) Export results (which by default might create "all_segments_{scenario}.geojson" etc.)
         config_copy = config.copy()
         config_copy.output_dir = nbhd_output_dir
         exported_gdfs = export_results(nbhd_results, config_copy)
 
-        # Generate webmap for this neighborhood
+        # 4G) Generate a webmap for this neighborhood
         try:
             scenario_geojsons = {}
             for scenario_name in nbhd_results.keys():
-                if scenario_name != 'ALL':
-                    geojson_path = os.path.join(
-                        nbhd_output_dir,
-                        f"priority_segments_{scenario_name}.geojson"
-                    )
-                    if os.path.exists(geojson_path):
-                        scenario_geojsons[scenario_name] = geojson_path
+                if scenario_name == 'ALL':
+                    continue
+                # Figure out the filename your export_results() uses
+                # e.g. "all_segments_{scenario_name}.geojson"
+                out_name = f"all_segments_{scenario_name}.geojson"
+                # or "priority_segments_{scenario_name}.geojson" if your code does that
+                geojson_path = os.path.join(nbhd_output_dir, out_name)
+                if os.path.exists(geojson_path):
+                    scenario_geojsons[scenario_name] = geojson_path
 
             if scenario_geojsons:
-                # Create neighborhood-specific config for correct boundary file reference
                 nbhd_config = config_copy
-                nbhd_config.input_dir = config.input_dir  # Keep original input dir for boundary file
+                nbhd_config.input_dir = config.input_dir  # to keep references consistent
 
-                # Generate the webmap
                 webmap_path = build_webmap(
                     scenario_geojsons,
                     nbhd_config,
@@ -1308,7 +1495,6 @@ def run_neighborhood_analysis(config):
         print(f"Completed processing for {nbhd_name}")
 
     print("\nNeighborhood analysis complete!")
-
 
 # ------------------------------------
 # Webmap Builder
@@ -1331,11 +1517,7 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
         if pd.isna(priority_score):
             return '#808080'  # gray for missing values
 
-        colors = [
-            '#FFB366',  # light orange (lowest priority)
-            '#FF9940', '#FF8533', '#FF6B1A',
-            '#FF4D00', '#E63900', '#CC0000'   # red (highest priority)
-        ]
+        colors = ['#FFE066', '#FFB84D', '#FF9933', '#FF7A1A', '#FF5C00', '#E63D00', '#CC0000']
 
         priorities = [f['properties'].get('priority') for f in feature_collection['features'] 
                      if f['properties'].get('priority') is not None]
@@ -1385,7 +1567,8 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
                     • Bus Stop Density: ~{format_value(properties.get('BusStpDens'), '{:,.0f}')} Stops per Mile<br>
                     • Bike Lane Density: {format_value(properties.get('bike_length', 0), '{:,.0f}')} ft Bike Lane per Mile<br>
                     • Pedestrian Mobility Priority: {format_value(properties.get('PedRank', 0), '{:,.0f}')}<br>
-                    • Population Density: {format_value(properties.get('pop_density'), '{:,.0f}')} People per Square Mile
+                    • Population Density: ~{format_value(properties.get('pop_density'), '{:,.0f}')} People per Square Mile<br>
+                    • Commercial Area: ~{format_value(properties.get('ComArea'), '{:,.0f}')} nearby sq ft per 1 ft of road
                 </div>
 
                 <div style="margin-bottom: 10px;">
@@ -1397,7 +1580,9 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
                     • Bus Stops: {format_value(properties.get('BusDensInx'), '{:.3f}')}<br>
                     • Bike Lanes: {format_value(properties.get('BikeLnIndx'), '{:.3f}')}<br>
                     • Pedestrian Mobility: {format_value(properties.get('PedIndex'), '{:.3f}')}<br>
-                    • Population Density: {format_value(properties.get('pop_dens_indx'), '{:.3f}')}
+                    • Population Density: {format_value(properties.get('pop_dens_indx'), '{:.3f}')}<br>
+                    • Commercial Area: {format_value(properties.get('ComIndex'), '{:.3f}')}
+
                 </div>
 
                 <div style="font-weight: bold; color: #CC0000;">
@@ -1459,6 +1644,69 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
         tiles="CartoDB Positron"
     )
 
+    # Add title
+    title_html = f'''
+    <div style="position: fixed; 
+                top: 20px; 
+                left: 12%; 
+                transform: translateX(-50%);
+                z-index: 1000;
+                background-color: white;
+                padding: 10px;
+                border: 2px solid grey;
+                border-radius: 5px;
+                font-size: 16px;
+                font-weight: bold;
+                font-family: Arial;">
+        {list(scenario_geojsons.keys())[0]} Roads
+    </div>
+    '''
+
+    m.get_root().html.add_child(folium.Element(title_html))
+
+    # Add FOZ layer
+    foz_path = os.path.join(config.input_dir, 'FOZ_NYC_Merged.geojson')
+    if os.path.exists(foz_path):
+        try:
+            foz_gdf = gpd.read_file(foz_path)
+            if foz_gdf.crs is None or foz_gdf.crs != "EPSG:4326":
+                foz_gdf = foz_gdf.to_crs("EPSG:4326")
+            folium.GeoJson(
+                foz_gdf,
+                name="Federal Opportunity Zones",
+                style_function=lambda x: {
+                    'fillColor': 'blue',
+                    'color': 'blue',
+                    'weight': 0.5,
+                    'fillOpacity': 0.05,
+                    'opacity': 1.0
+                }
+            ).add_to(m)
+        except Exception as e:
+            print(f"Warning: Could not process FOZ file: {str(e)}")
+
+    # Add Persistent Poverty layer
+    poverty_path = os.path.join(config.input_dir, 'nyc_persistent_poverty.geojson')
+    if os.path.exists(poverty_path):
+        try:
+            poverty_gdf = gpd.read_file(poverty_path)
+            if poverty_gdf.crs is None or poverty_gdf.crs != "EPSG:4326":
+                poverty_gdf = poverty_gdf.to_crs("EPSG:4326")
+            folium.GeoJson(
+                poverty_gdf,
+                name="Persistent Poverty Areas",
+                style_function=lambda x: {
+                    'fillColor': 'green',
+                    'color': 'green',
+                    'weight': 0.5,
+                    'fillOpacity': 0.05,
+                    'opacity': 1.0
+                }
+            ).add_to(m)
+        except Exception as e:
+            print(f"Warning: Could not process persistent poverty file: {str(e)}")
+
+
     # Add neighborhoods layer
     if neighborhoods_4326 is not None and not neighborhoods_4326.empty:
         folium.GeoJson(
@@ -1471,13 +1719,24 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
             }
         ).add_to(m)
 
-    # Add legend
     legend_html = """
-    <div style="position: fixed; bottom: 50px; right: 50px; 
-                background: white; padding: 10px; border: 2px solid grey;">
-        <h4>Priority Score</h4>
-        <div style="display: flex; flex-direction: column; gap: 5px;">
+    <div style="
+        position: fixed; 
+        bottom: 50px; 
+        right: 50px; 
+        z-index: 1000;
+        background: white; 
+        padding: 10px; 
+        border: 2px solid grey;
+        border-radius: 5px;
+        ">
+        <h4 style="margin-bottom: 10px;">Legend</h4>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div>
+                <h5 style="margin: 5px 0;">Road Priority Score</h5>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
     """
+
     colors = ['#CC0000', '#E63900', '#FF4D00', '#FF6B1A', 
               '#FF8533', '#FF9940', '#FFB366']
     labels = ['1.0', '0.83', '0.67', '0.5', '0.33', '0.17', '0.0']
@@ -1489,8 +1748,37 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
                 <span>{label}</span>
             </div>
         """
-    legend_html += "</div></div>"
-    m.get_root().html.add_child(folium.Element(legend_html))
+
+
+    legend_html += """
+                </div>
+            </div>
+            <div>
+                <h5 style="margin: 5px 0;">Area Overlays</h5>
+                <div style="display: flex; flex-direction: column; gap: 5px;">
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 20px; height: 20px; background: gray; opacity: 0.2; border: 1px solid gray;"></div>
+                        <span>CSC Neighborhoods</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 20px; height: 20px; background: green; opacity: 0.1; border: 1px solid green;"></div>
+                        <span>Persistent Poverty Areas</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 20px; height: 20px; background: blue; opacity: 0.1; border: 1px solid blue;"></div>
+                        <span>Federal Opportunity Zones</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    """
+
+    # Create a custom Legend element
+    legend = folium.Element(legend_html)
+
+    # Add the legend to the map
+    m.get_root().html.add_child(legend)
 
     # Add scenario layers with popups
     for scenario_name, gdf_4326 in scenario_data.items():
