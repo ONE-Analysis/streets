@@ -66,18 +66,6 @@ def main():
             'pop_dens_indx': 0.15,          # people per square mile within 1000' buffer
             'ComIndex': 0.15                # commercial space within 1000' buffer
         }
-
-        #     'CoolCorridors': {
-        #     'PavementIndex': 0,             # uses 'v' shaped suitability
-        #     'HeatHazIndex': 0,              # raw heat values from summers 2021-2024
-        #     'TreeCanopyIndex': 0.25,        # assessment of tree canopy percentage
-        #     'HeatVulnerabilityIndex': 0,    # heat vulnerability index values
-        #     'BusDensInx': 0.15,             # bus stops per mile
-        #     'BikeLnIndx': 0.15,             # bike lane length per mile
-        #     'PedIndex': 0.2,                # road prioritization in NYC Pedestrian Mobility Plan
-        #     'pop_dens_indx': 0.25,          # people per square mile within 1000' buffer
-        #     'ComIndex': 0                   # commercial space within 1000' buffer
-        # }
     }
     # We'll store our "top 200" GeoDataFrames and paths, 
     # but generate separate webmaps so each has `_top200` in the filename.

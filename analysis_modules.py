@@ -1300,6 +1300,8 @@ def run_neighborhood_analysis(config):
     Run analysis for each neighborhood separately, ensuring that each neighborhood
     has its indices (pave_indx, heat_indx, ComIndex, etc.) re-min-maxed based on 
     only that neighborhood's data.
+    
+    This version generates separate HTML webmaps for each scenario.
     """
     import os
     import geopandas as gpd
@@ -1410,7 +1412,6 @@ def run_neighborhood_analysis(config):
         # 4C) Re-min-max each relevant index *within* the neighborhood
         #     This ensures each index is 0-1 based on neighborhood's data only.
         # ---------------------------------------------------------------------
-        # Use your DataProcessors, or do it inline. Let's do a direct approach:
         from numpy import nanmin, nanmax
 
         # Example: heat_mean -> heat_indx
@@ -1427,11 +1428,10 @@ def run_neighborhood_analysis(config):
 
         # Heat vulnerability -> vuln_indx (if you store raw in 'hvi_raw')
         if 'hvi_raw' in nbhd_roads.columns:
-            nbhd_roads['vuln_indx'] = DataProcessors.normalize_to_index(nbhd_roads['hvi_raw'], 'basic')  # or custom
+            nbhd_roads['vuln_indx'] = DataProcessors.normalize_to_index(nbhd_roads['hvi_raw'], 'basic')
 
         # Bus stops -> BusDensInx
         if 'BusStpDens' in nbhd_roads.columns:
-            # Use normal 0-1 min-max
             nbhd_roads['BusDensInx'] = DataProcessors.normalize_to_index(nbhd_roads['BusStpDens'], 'basic')
 
         # Bike lanes -> BikeLnIndx
@@ -1462,30 +1462,33 @@ def run_neighborhood_analysis(config):
         config_copy.output_dir = nbhd_output_dir
         exported_gdfs = export_results(nbhd_results, config_copy)
 
-        # 4G) Generate a webmap for this neighborhood
+        # ---------------------------------------------------------------------
+        # 4G) Generate separate HTML webmaps for each scenario
+        # ---------------------------------------------------------------------
         try:
             scenario_geojsons = {}
             for scenario_name in nbhd_results.keys():
+                # Skip any keys you do not want to map (e.g., a combined "ALL" scenario)
                 if scenario_name == 'ALL':
                     continue
-                # Figure out the filename your export_results() uses
-                # e.g. "all_segments_{scenario_name}.geojson"
+                # Construct the expected filename (adjust this if your export naming differs)
                 out_name = f"all_segments_{scenario_name}.geojson"
-                # or "priority_segments_{scenario_name}.geojson" if your code does that
                 geojson_path = os.path.join(nbhd_output_dir, out_name)
                 if os.path.exists(geojson_path):
                     scenario_geojsons[scenario_name] = geojson_path
 
             if scenario_geojsons:
                 nbhd_config = config_copy
-                nbhd_config.input_dir = config.input_dir  # to keep references consistent
+                nbhd_config.input_dir = config.input_dir  # maintain consistent reference paths
 
-                webmap_path = build_webmap(
-                    scenario_geojsons,
-                    nbhd_config,
-                    neighborhood_name=nbhd_name
-                )
-                print(f"Generated webmap for {nbhd_name}: {webmap_path}")
+                # Generate a separate HTML webmap for each scenario
+                for scenario_name, geojson_path in scenario_geojsons.items():
+                    scenario_webmap_path = build_webmap(
+                        {scenario_name: geojson_path},  # pass a single scenario in a dict
+                        nbhd_config,
+                        neighborhood_name=f"{nbhd_name}_{scenario_name}"
+                    )
+                    print(f"Generated webmap for {nbhd_name} scenario {scenario_name}: {scenario_webmap_path}")
             else:
                 print(f"No GeoJSON files found for {nbhd_name} webmap generation")
 

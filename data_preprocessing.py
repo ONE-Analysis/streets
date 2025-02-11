@@ -9,16 +9,17 @@ def load_and_preprocess_roads(config):
     try:
         print("Loading road network data...")
 
-        # Load from GeoJSON
+        # -------------------------------
+        # Load road network data from GeoJSON
+        # -------------------------------
         roads = gpd.read_file(os.path.join(config.input_dir, 'lion_data.geojson'))
-
         print(f"Initial load - total features: {len(roads)}")
         print(f"Columns available: {list(roads.columns)}")
 
         # Ensure correct CRS
         roads = roads.to_crs(config.crs)
 
-        # Standardize SegmentID
+        # Standardize SegmentID and create a padded segmentid for merging later
         roads['SegmentID'] = roads['SegmentID'].astype(str).str.strip()
         roads['segmentid'] = roads['SegmentID'].str.zfill(7)
 
@@ -27,7 +28,6 @@ def load_and_preprocess_roads(config):
         for col in string_columns:
             roads[col] = roads[col].str.strip()
 
-        # Step-by-step filtering
         # =====================================
         # Filter by FeatureTyp
         # =====================================
@@ -37,14 +37,9 @@ def load_and_preprocess_roads(config):
         # =====================================
         # Filter by RW_TYPE
         # =====================================
-        # just roads
         roads = roads[roads['RW_TYPE'] == '1']
         print(f"After RW_TYPE filter: {len(roads)} roads remaining")
         
-        #Highways and roads
-        # roads = roads[roads['RW_TYPE'].isin(['1', '2'])]
-        # print(f"After RW_TYPE filter: {len(roads)} roads remaining")
-
         # =====================================
         # Filter by Status
         # =====================================
@@ -52,17 +47,11 @@ def load_and_preprocess_roads(config):
         print(f"After Status filter: {len(roads)} roads remaining")
 
         # =====================================
-        # Filter by Carto_Display_Level
-        # =====================================
-        # roads = roads[roads['Carto_Display_Level'] == '10']
-        # print(f"After Carto_Display_Level filter: {len(roads)} roads remaining")
-
-        # =====================================
         # Filter by StreetWidth_Min
         # =====================================
         min_street_width = config.analysis_params['min_street_width']
-        roads_width = roads[roads['StreetWidth_Min'] >= min_street_width]
-        print(f"After StreetWidth_Min filter: {len(roads_width)} roads remaining")
+        roads = roads[roads['StreetWidth_Min'] >= min_street_width]
+        print(f"After StreetWidth_Min filter: {len(roads)} roads remaining")
 
         # =====================================
         # Filter by HVI intersection
@@ -73,11 +62,13 @@ def load_and_preprocess_roads(config):
             vulnerability = gpd.read_file(vuln_path)
 
             # Convert HVI to numeric, handling string format
-            vulnerability['hvi_numeric'] = (vulnerability['HVI']
+            vulnerability['hvi_numeric'] = (
+                vulnerability['HVI']
                 .astype(str)
                 .str.strip()
                 .replace({'': None, 'null': None, 'nan': None})
-                .pipe(pd.to_numeric, errors='coerce'))
+                .pipe(pd.to_numeric, errors='coerce')
+            )
 
             # Filter vulnerability polygons using config parameter
             min_vuln = config.analysis_params['min_vulnerability']
@@ -85,8 +76,8 @@ def load_and_preprocess_roads(config):
 
             if len(high_vuln) > 0:
                 # Ensure same CRS
-                if high_vuln.crs != roads_width.crs:
-                    high_vuln = high_vuln.to_crs(roads_width.crs)
+                if high_vuln.crs != roads.crs:
+                    high_vuln = high_vuln.to_crs(roads.crs)
 
                 print(f"Filtering for roads intersecting with HVI >= {min_vuln} areas...")
                 print(f"Number of high vulnerability polygons: {len(high_vuln)}")
@@ -102,98 +93,137 @@ def load_and_preprocess_roads(config):
                     possible_matches = high_vuln.iloc[possible_matches_idx]
                     return any(possible_matches.intersects(road_geom))
 
-                # Apply the filter
-                roads_hvi = roads_width[roads_width.geometry.apply(intersects_high_vuln)]
-                print(f"After HVI intersection filter: {len(roads_hvi)} roads remaining")
-
-                roads_result = roads_hvi
+                # Apply the HVI filter
+                roads = roads[roads.geometry.apply(intersects_high_vuln)]
+                print(f"After HVI intersection filter: {len(roads)} roads remaining")
             else:
                 print(f"Warning: No areas with HVI >= {min_vuln} found. Skipping HVI filter.")
-                roads_result = roads_width
         else:
             print(f"Warning: Vulnerability file not found at {vuln_path}. Skipping HVI filter.")
-            roads_result = roads_width
+
+        # # =====================================
+        # # Filter by Capital Project Exclusion Buffer
+        # # =====================================
+        # # Buffer the DOT Capital Projects datasets (lines and points) and exclude any road that intersects the buffered areas.
+        # cap_proj_buffer = config.analysis_params.get('CapitalProjectExclusionBuffer', 10)
+        # cap_proj_lines_path = os.path.join(config.input_dir, 'DOTCapitalProjects_Lines.geojson')
+        # cap_proj_pts_path = os.path.join(config.input_dir, 'DOTCapitalProjects_Pts.geojson')
+
+        # if os.path.exists(cap_proj_lines_path) or os.path.exists(cap_proj_pts_path):
+        #     buffers = []  # List to hold buffered geometries
+
+        #     if os.path.exists(cap_proj_lines_path):
+        #         print("Loading DOT Capital Projects Lines for exclusion...")
+        #         cap_proj_lines = gpd.read_file(cap_proj_lines_path)
+        #         cap_proj_lines = cap_proj_lines.to_crs(roads.crs)
+        #         # Buffer the lines dataset by the specified distance (in feet)
+        #         cap_proj_lines['geometry'] = cap_proj_lines.geometry.buffer(cap_proj_buffer)
+        #         buffers.append(cap_proj_lines)
+
+        #     if os.path.exists(cap_proj_pts_path):
+        #         print("Loading DOT Capital Projects Points for exclusion...")
+        #         cap_proj_pts = gpd.read_file(cap_proj_pts_path)
+        #         cap_proj_pts = cap_proj_pts.to_crs(roads.crs)
+        #         # Buffer the points dataset by the specified distance (in feet)
+        #         cap_proj_pts['geometry'] = cap_proj_pts.geometry.buffer(cap_proj_buffer)
+        #         buffers.append(cap_proj_pts)
+
+        #     if buffers:
+        #         # Combine the buffered geometries into one GeoDataFrame
+        #         cap_proj_buffers = gpd.GeoDataFrame(
+        #             pd.concat(buffers, ignore_index=True),
+        #             crs=roads.crs
+        #         )
+        #         spatial_index = cap_proj_buffers.sindex
+
+        #         # Function to check if a road intersects any buffered capital project feature
+        #         def intersects_cap_proj(road_geom):
+        #             possible_matches_idx = list(spatial_index.intersection(road_geom.bounds))
+        #             if not possible_matches_idx:
+        #                 return False
+        #             possible_matches = cap_proj_buffers.iloc[possible_matches_idx]
+        #             return any(possible_matches.intersects(road_geom))
+
+        #         # Exclude roads that intersect with any buffered capital project feature
+        #         roads = roads[~roads.geometry.apply(intersects_cap_proj)]
+        #         print(f"After Capital Project Exclusion filter: {len(roads)} roads remaining")
+        # else:
+        #     print("Capital Project files not found. Skipping Capital Project Exclusion filter.")
 
         # =====================================
-        # FOZ Intersection Filter
+        # FOZ Intersection Filter (commented out)
         # =====================================
         # foz_path = os.path.join(config.input_dir, 'FOZ_NYC_Merged.geojson')
         # if os.path.exists(foz_path):
         #     print("Loading FOZ data for filtering...")
         #     foz = gpd.read_file(foz_path)
-
+        #
         #     if len(foz) > 0:
-        #         # Ensure same CRS
-        #         if foz.crs != roads_result.crs:
-        #             foz = foz.to_crs(roads_result.crs)
-
+        #         if foz.crs != roads.crs:
+        #             foz = foz.to_crs(roads.crs)
+        #
         #         print(f"Filtering for roads intersecting with FOZ areas...")
         #         print(f"Number of FOZ polygons: {len(foz)}")
-
-        #         # Create spatial index for efficiency
+        #
         #         foz_spatial_index = foz.sindex
-
-        #         # Function to check if a road intersects with any FOZ polygon
+        #
         #         def intersects_foz(road_geom):
         #             possible_matches_idx = list(foz_spatial_index.intersection(road_geom.bounds))
         #             if not possible_matches_idx:
         #                 return False
         #             possible_matches = foz.iloc[possible_matches_idx]
         #             return any(possible_matches.intersects(road_geom))
-
-        #         # Apply the filter
-        #         roads_foz = roads_result[roads_result.geometry.apply(intersects_foz)]
-        #         print(f"After FOZ intersection filter: {len(roads_foz)} roads remaining")
-
-        #         roads_result = roads_foz
+        #
+        #         roads = roads[roads.geometry.apply(intersects_foz)]
+        #         print(f"After FOZ intersection filter: {len(roads)} roads remaining")
         #     else:
-        #         print(f"Warning: No FOZ areas found. Skipping FOZ filter.")
+        #         print("Warning: No FOZ areas found. Skipping FOZ filter.")
         # else:
-        #     print(f"Warning: FOZ file not found at {foz_path}. Skipping FOZ filter.")
+        #     print("Warning: FOZ file not found. Skipping FOZ filter.")
 
         # =====================================
-        # Persistent Poverty Intersection Filter
+        # Persistent Poverty Intersection Filter (commented out)
         # =====================================
         # poverty_path = os.path.join(config.input_dir, 'nyc_persistent_poverty.geojson')
         # if os.path.exists(poverty_path):
         #     print("Loading persistent poverty data for filtering...")
         #     poverty = gpd.read_file(poverty_path)
-
+        #
         #     if len(poverty) > 0:
-        #         # Ensure same CRS
-        #         if poverty.crs != roads_result.crs:
-        #             poverty = poverty.to_crs(roads_result.crs)
-
+        #         if poverty.crs != roads.crs:
+        #             poverty = poverty.to_crs(roads.crs)
+        #
         #         print(f"Filtering for roads intersecting with persistent poverty areas...")
         #         print(f"Number of poverty area polygons: {len(poverty)}")
-
-        #         # Create spatial index for efficiency
+        #
         #         poverty_spatial_index = poverty.sindex
-
-        #         # Function to check if a road intersects with any poverty polygon
+        #
         #         def intersects_poverty(road_geom):
         #             possible_matches_idx = list(poverty_spatial_index.intersection(road_geom.bounds))
         #             if not possible_matches_idx:
         #                 return False
         #             possible_matches = poverty.iloc[possible_matches_idx]
         #             return any(possible_matches.intersects(road_geom))
-
-        #         # Apply the filter
-        #         roads_poverty = roads_result[roads_result.geometry.apply(intersects_poverty)]
-        #         print(f"After persistent poverty intersection filter: {len(roads_poverty)} roads remaining")
-
-        #         roads_result = roads_poverty
+        #
+        #         roads = roads[roads.geometry.apply(intersects_poverty)]
+        #         print(f"After persistent poverty intersection filter: {len(roads)} roads remaining")
         #     else:
-        #         print(f"Warning: No persistent poverty areas found. Skipping poverty filter.")
+        #         print("Warning: No persistent poverty areas found. Skipping poverty filter.")
         # else:
-        #     print(f"Warning: Persistent poverty file not found at {poverty_path}. Skipping poverty filter.")
+        #     print("Warning: Persistent poverty file not found. Skipping poverty filter.")
+
+        # =====================================
+        # Final assignment for compatibility with following steps
+        # =====================================
+        roads_result = roads
 
         # =====================================
         # Load and merge pedestrian demand data
         # =====================================
         print("\nLoading pedestrian demand data...")
-        ped_demand = pd.read_csv(os.path.join(config.input_dir, 
-            'Pedestrian_Mobility_Plan_Pedestrian_Demand_20250117.csv'))
+        ped_demand = pd.read_csv(
+            os.path.join(config.input_dir, 'Pedestrian_Mobility_Plan_Pedestrian_Demand_20250117.csv')
+        )
 
         # Ensure segmentid is in the same format for joining
         ped_demand['segmentid'] = ped_demand['segmentid'].astype(str).str.strip().str.zfill(7)

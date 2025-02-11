@@ -20,18 +20,19 @@ class CoolPavementConfig:
             'min_vulnerability': 4,
             'min_street_width': 15,
             'rail_buffer': 25,
-            'pop_buffer_ft': 1000
+            'pop_buffer_ft': 1000,
+            'CapitalProjectExclusionBuffer': 5
         }
 
         # Specific parameters for each analysis type
         citywide_specific = {
-            'number_of_top_roads': 200,     # This will select top 200 segments citywide
+            'number_of_top_roads': 200,     # This will select top x segments citywide
             'min_segment_length': 1500,     # Minimum segment length in feet
             'priority_threshold': 200        # Explicitly set the priority threshold
         }
 
         neighborhood_specific = {
-            'number_of_top_roads': 50,      # This will select top 10 segments per neighborhood
+            'number_of_top_roads': 50,      # This will select top x segments per neighborhood
             'min_segment_length': 1000,     # Minimum segment length in feet
             'priority_threshold': 50        # Explicitly set the priority threshold
         }
@@ -46,26 +47,26 @@ class CoolPavementConfig:
         # Weight scenarios
         self.weight_scenarios = {
             'CoolPavement': {
-                'PavementIndex': 0.25,           # uses 'v' shaped suitability
-                'HeatHazIndex': 0.1,             # raw heat values from summers 2021-2024
-                'TreeCanopyIndex': 0.15,         # assessment of tree canopy percentage
-                'HeatVulnerabilityIndex': 0.15,  # heat vulnerability index values
-                'BusDensInx': 0.05,              # bus stops per mile
-                'BikeLnIndx': 0.05,              # bike lane length per mile
-                'PedIndex': 0,                   # road prioritization in NYC Pedestrian Mobility Plan
-                'pop_dens_indx': 0.1,            # people per square mile within 1000' buffer
-                'ComIndex': 0.15                 # commercial space within 1000' buffer
+                'PavementIndex': 0.25,          # uses 'v' shaped suitability
+                'HeatHazIndex': 0,            # raw heat values from summers 2021-2024
+                'TreeCanopyIndex': 0.1,        # assessment of tree canopy percentage
+                'HeatVulnerabilityIndex': 0.1, # heat vulnerability index values
+                'BusDensInx': 0,             # bus stops per mile
+                'BikeLnIndx': 0.1,             # bike lane length per mile
+                'PedIndex': 0.2,                  # road prioritization in NYC Pedestrian Mobility Plan
+                'pop_dens_indx': 0.25,          # people per square mile within 1000' buffer
+                'ComIndex': 0                   # commercial space within 1000' buffer
             },
             'CoolCorridors': {
                 'PavementIndex': 0,             # uses 'v' shaped suitability
                 'HeatHazIndex': 0,              # raw heat values from summers 2021-2024
-                'TreeCanopyIndex': 0.25,        # assessment of tree canopy percentage
-                'HeatVulnerabilityIndex': 0,    # heat vulnerability index values
-                'BusDensInx': 0.15,             # bus stops per mile
-                'BikeLnIndx': 0.15,             # bike lane length per mile
-                'PedIndex': 0.2,                # road prioritization in NYC Pedestrian Mobility Plan
-                'pop_dens_indx': 0.25,          # people per square mile within 1000' buffer
-                'ComIndex': 0                   # commercial space within 1000' buffer
+                'TreeCanopyIndex': 0.2,         # assessment of tree canopy percentage
+                'HeatVulnerabilityIndex': 0.1,  # heat vulnerability index values
+                'BusDensInx': 0.05,             # bus stops per mile
+                'BikeLnIndx': 0.05,             # bike lane length per mile
+                'PedIndex': 0.3,                # road prioritization in NYC Pedestrian Mobility Plan
+                'pop_dens_indx': 0.15,          # people per square mile within 1000' buffer
+                'ComIndex': 0.15                # commercial space within 1000' buffer
             }
         }
 
