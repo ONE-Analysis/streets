@@ -4,6 +4,11 @@ import pandas as pd
 import geopandas as gpd
 from shapely.ops import unary_union
 
+import rasterio
+from rasterio import features, mask
+from rasterio.transform import from_origin
+from rasterio.io import MemoryFile
+
 def load_and_preprocess_roads(config):
     """Load and preprocess road network data."""
     try:
@@ -54,6 +59,26 @@ def load_and_preprocess_roads(config):
         print(f"After StreetWidth_Min filter: {len(roads)} roads remaining")
 
         # =====================================
+        # Filter by Elevated Railways
+        # =====================================
+        print("Filtering roads that intersect with elevated railways buffer...")
+        # Load the elevated railways GeoJSON
+        elevated_rails = gpd.read_file(os.path.join(config.input_dir, 'ElevatedRailways.geojson'))
+        elevated_rails = elevated_rails.to_crs(config.crs)
+
+        # Get the buffer distance from the configuration
+        rail_buffer = config.analysis_params['rail_buffer']
+
+        # Buffer the elevated railways geometries by the rail_buffer distance
+        elevated_rails['buffered_geom'] = elevated_rails.geometry.buffer(rail_buffer)
+        # Combine all buffered geometries into a single geometry
+        buffered_union = elevated_rails['buffered_geom'].unary_union
+
+        # Remove roads that intersect with the buffered elevated railways
+        roads = roads[~roads.geometry.intersects(buffered_union)]
+        print(f"After Elevated Railways filter: {len(roads)} roads remaining")
+
+        # =====================================
         # Filter by HVI intersection
         # =====================================
         vuln_path = os.path.join(config.input_dir, 'HeatVulnerabilityIndex.geojson')
@@ -100,6 +125,205 @@ def load_and_preprocess_roads(config):
                 print(f"Warning: No areas with HVI >= {min_vuln} found. Skipping HVI filter.")
         else:
             print(f"Warning: Vulnerability file not found at {vuln_path}. Skipping HVI filter.")
+
+        # =====================================
+        # Load and merge pedestrian demand data
+        # =====================================
+        print("\nLoading pedestrian demand data...")
+        ped_demand = pd.read_csv(os.path.join(config.input_dir, 'Pedestrian_Mobility_Plan_Pedestrian_Demand_20250117.csv'))
+        ped_demand['segmentid'] = ped_demand['segmentid'].astype(str).str.strip().str.zfill(7)
+
+        # Remove duplicates so that each segmentid appears only once
+        ped_demand = ped_demand.drop_duplicates(subset='segmentid')
+
+        # Populate PedRank and invert the values
+        ped_demand['PedRank'] = ped_demand['Rank']
+        ped_demand['PedRankInverted'] = 6 - ped_demand['Rank']
+
+        # Then merge using an inner join
+        roads = roads.merge(
+            ped_demand[['segmentid', 'PedRank', 'PedRankInverted']], 
+            on='segmentid', 
+            how='inner'
+        )
+
+        # Create PedIndex via min–max normalization on PedRankInverted
+        min_inverted = roads['PedRankInverted'].min()
+        max_inverted = roads['PedRankInverted'].max()
+        if max_inverted - min_inverted != 0:
+            roads['PedIndex'] = (roads['PedRankInverted'] - min_inverted) / (max_inverted - min_inverted)
+        else:
+            roads['PedIndex'] = 0
+
+        print(f"Segments with PedRank data: {roads['PedRankInverted'].notna().sum()}")
+        print(f"PedIndex range: {roads['PedIndex'].min():.3f} to {roads['PedIndex'].max():.3f}")
+
+        # =====================================
+        # Process NYC Sidewalk data (raster-based approach)
+        # =====================================
+        roads = process_sidewalk_data(roads, config)
+
+        # =====================================
+        # Process Road metrics
+        # =====================================
+        roads = process_road_width(roads)
+
+        # =====================================
+        # Return the final dataframe with all features.
+        # =====================================
+        return roads
+
+    except Exception as e:
+        print(f"Error in road network preprocessing: {str(e)}")
+        raise
+
+
+def process_sidewalk_data(df, config):
+    """
+    Process NYC Sidewalk data using a raster-based approach:
+      - Rasterize the sidewalk GeoJSON to a binary raster
+      - For each road segment, buffer by 0.75 * StreetWidth_Min
+      - Use raster masking to sum sidewalk pixels within the buffer
+    
+    Parameters:
+      df (GeoDataFrame): Roads data with StreetWidth_Min field
+      config: Configuration object (provides input directory, CRS, etc.)
+      
+    Returns:
+      df (GeoDataFrame): Updated with sidewalk_area and SidewalkIndex fields
+    """
+    import os
+    import numpy as np
+    import geopandas as gpd
+    from rasterio import features, mask
+    from rasterio.transform import from_origin
+    from rasterio.io import MemoryFile
+
+    print("\nProcessing NYC Sidewalk data (raster-based approach)...")
+    sidewalk_path = os.path.join(config.input_dir, 'NYC_Sidewalk.geojson')
+    sidewalk = gpd.read_file(sidewalk_path)
+    if sidewalk.crs != df.crs:
+        sidewalk = sidewalk.to_crs(df.crs)
+    
+    # Determine the bounds for rasterization based on the roads dataset, adding a margin
+    xmin, ymin, xmax, ymax = df.total_bounds
+    margin = 100  # feet margin to cover buffers extending beyond road bounds
+    xmin -= margin
+    ymin -= margin
+    xmax += margin
+    ymax += margin
+
+    # Define a suitable resolution (e.g., 5 feet per pixel)
+    resolution = 5.0
+    width = int(np.ceil((xmax - xmin) / resolution))
+    height = int(np.ceil((ymax - ymin) / resolution))
+    transform = from_origin(xmin, ymax, resolution, resolution)
+    pixel_area = resolution * resolution
+
+    # Rasterize sidewalk polygons (1 = sidewalk, 0 = no sidewalk)
+    shapes = ((geom, 1) for geom in sidewalk.geometry)
+    sidewalk_raster = features.rasterize(
+        shapes=shapes,
+        out_shape=(height, width),
+        transform=transform,
+        fill=0,
+        dtype=np.uint8
+    )
+
+    # Open an in-memory raster dataset for masking
+    with MemoryFile() as memfile:
+        with memfile.open(driver='GTiff',
+                          height=height,
+                          width=width,
+                          count=1,
+                          dtype=sidewalk_raster.dtype,
+                          transform=transform) as dataset:
+            dataset.write(sidewalk_raster, 1)
+            
+            # Initialize list for results
+            sidewalk_areas = []
+            
+            # Process each road segment
+            for idx, row in df.iterrows():
+                road_geom = row.geometry
+                street_width = row.get('StreetWidth_Min', 0)
+                buffer_dist = 0.75 * street_width
+                buffered_geom = road_geom.buffer(buffer_dist)
+                try:
+                    # Mask the raster with the road buffer geometry
+                    out_image, out_transform = mask.mask(dataset, [buffered_geom], crop=True)
+                    # out_image has shape (1, h, w); count sidewalk pixels (value==1)
+                    sidewalk_pixels = (out_image[0] == 1).sum()
+                    area = sidewalk_pixels * pixel_area
+                except Exception as e:
+                    print(f"Error masking for road idx {idx}: {e}")
+                    area = 0
+                sidewalk_areas.append(area)
+    
+    # Add the sidewalk area field to the dataframe
+    df['sidewalk_area'] = sidewalk_areas
+
+    print(f"Calculated sidewalk_area for {len(df)} segments.")
+    
+    # Normalize sidewalk_area to [0,1] and then convert to a V-shaped index.
+    min_sidewalk = df['sidewalk_area'].min()
+    max_sidewalk = df['sidewalk_area'].max()
+    if max_sidewalk - min_sidewalk != 0:
+        normalized = (df['sidewalk_area'] - min_sidewalk) / (max_sidewalk - min_sidewalk)
+        df['SidewalkIndex'] = 2 * abs(normalized - 0.5)
+    else:
+        df['SidewalkIndex'] = 0
+
+    # Print summary statistics
+    non_zero = df['sidewalk_area'][df['sidewalk_area'] > 0]
+    print("\nSidewalk Area Summary Statistics:")
+    print(f"  Total segments with sidewalks: {len(non_zero)}")
+    print(f"  Mean area: {df['sidewalk_area'].mean():.2f} sq ft")
+    print(f"  Range: {df['sidewalk_area'].min():.2f} to {df['sidewalk_area'].max():.2f} sq ft")
+    print(f"  Median: {df['sidewalk_area'].median():.2f} sq ft")
+    print(f"  Segments with zero area: {len(df) - len(non_zero)}")
+    
+    return df
+
+def process_road_width(df):
+    """
+    Normalize StreetWidth_Min to create a RoadWidthIndex.
+    
+    Parameters:
+      df (DataFrame): Road network data containing StreetWidth_Min
+      
+    Returns:
+      df (DataFrame): Updated with RoadWidthIndex column.
+    """
+    import numpy as np
+    df = df.copy()
+    
+    # Create a mask for valid rows
+    mask = (df['StreetWidth_Min'] > 0)
+    valid_data = df[mask].copy()
+    
+    if len(valid_data) == 0:
+        print("No valid segments for normalized road metrics.")
+        df['RoadWidthIndex'] = np.nan
+        return df
+
+    # Normalize StreetWidth_Min to [0,1] to create the index
+    min_width = valid_data['StreetWidth_Min'].min()
+    max_width = valid_data['StreetWidth_Min'].max()
+    valid_data['RoadWidthIndex'] = (valid_data['StreetWidth_Min'] - min_width) / (max_width - min_width)
+
+    # Merge the computed index back into the original dataframe
+    df.loc[mask, 'RoadWidthIndex'] = valid_data['RoadWidthIndex']
+    
+    # Print summary statistics
+    print("\nRoadWidthIndex Summary Statistics (Valid Segments):")
+    valid_rpi = df['RoadWidthIndex'].dropna() 
+    print(f"  Mean: {valid_rpi.mean():.4f}")
+    print(f"  Median: {valid_rpi.median():.4f}")
+    print(f"  Range: {valid_rpi.min():.4f} to {valid_rpi.max():.4f}")
+    
+    return df
+
 
         # # =====================================
         # # Filter by Capital Project Exclusion Buffer
@@ -211,155 +435,3 @@ def load_and_preprocess_roads(config):
         #         print("Warning: No persistent poverty areas found. Skipping poverty filter.")
         # else:
         #     print("Warning: Persistent poverty file not found. Skipping poverty filter.")
-
-        # =====================================
-        # Final assignment for compatibility with following steps
-        # =====================================
-        roads_result = roads
-
-        # =====================================
-        # Load and merge pedestrian demand data
-        # =====================================
-        print("\nLoading pedestrian demand data...")
-        ped_demand = pd.read_csv(
-            os.path.join(config.input_dir, 'Pedestrian_Mobility_Plan_Pedestrian_Demand_20250117.csv')
-        )
-
-        # Ensure segmentid is in the same format for joining
-        ped_demand['segmentid'] = ped_demand['segmentid'].astype(str).str.strip().str.zfill(7)
-
-        # Merge pedestrian demand data
-        result_df = roads_result.merge(
-            ped_demand[['segmentid', 'Rank']], 
-            on='segmentid', 
-            how='left'
-        )
-
-        # Rename Rank to PedRank
-        result_df = result_df.rename(columns={'Rank': 'PedRank'})
-
-        # Create PedIndex (min-max normalization)
-        min_rank = result_df['PedRank'].min()
-        max_rank = result_df['PedRank'].max()
-        result_df['PedIndex'] = (result_df['PedRank'] - min_rank) / (max_rank - min_rank)
-
-        print(f"Segments with PedRank data: {result_df['PedRank'].notna().sum()}")
-        print(f"PedIndex range: {result_df['PedIndex'].min():.3f} to {result_df['PedIndex'].max():.3f}")
-
-        return result_df
-
-    except Exception as e:
-        print(f"Error in road network preprocessing: {str(e)}")
-        raise
-
-
-def process_bike_lanes(roads_gdf, buffer_distance=50):
-    """
-    Process bike lanes by calculating the length of nearby bike lanes for each road segment,
-    then derive 'bike_ln_per_mile' based on road length.
-
-    Args:
-        roads_gdf (GeoDataFrame): GeoDataFrame of road segments, *must* have a 'segment_length' column in feet.
-        buffer_distance (float): Distance in feet to buffer road segments (default: 10)
-
-    Returns:
-        roads_gdf (GeoDataFrame): Updated GeoDataFrame with 'bike_length' and 'bike_ln_per_mile' columns.
-    """
-    import geopandas as gpd
-    import numpy as np
-    from shapely.ops import unary_union
-
-    try:
-        print("\nProcessing bike lane data...")
-
-        # Read the bike lanes GeoJSON
-        bike_lane_gdf = gpd.read_file('input/bikelanes.geojson')
-        print(f"Loaded {len(bike_lane_gdf)} bike lane features")
-
-        print("\nBike lanes CRS:", bike_lane_gdf.crs)
-        print("Roads CRS:", roads_gdf.crs)
-        print("\nBike lanes geometry types:", bike_lane_gdf.geometry.geom_type.value_counts())
-
-        # 1) Ensure same CRS
-        if roads_gdf.crs != bike_lane_gdf.crs:
-            print("Reprojecting bike lanes to match roads CRS...")
-            bike_lane_gdf = bike_lane_gdf.to_crs(roads_gdf.crs)
-
-        # Validate geometries
-        bike_lane_gdf.geometry = bike_lane_gdf.geometry.make_valid()
-        roads_gdf.geometry = roads_gdf.geometry.make_valid()
-
-        # 2) Create union of bike lanes for intersection
-        print("Creating bike lanes union...")
-        bike_union = unary_union(bike_lane_gdf.geometry)
-        print(f"Union geometry type: {bike_union.geom_type}")
-
-        # 3) Calculate intersection lengths with buffering
-        print(f"Calculating intersection lengths (using {buffer_distance} ft buffer)...")
-        bike_lengths = []
-        total_intersections = 0
-
-        for idx, row in roads_gdf.iterrows():
-            road_geom = row.geometry
-            if road_geom is None or road_geom.is_empty:
-                bike_lengths.append(0.0)
-                continue
-
-            try:
-                buffered_road = road_geom.buffer(buffer_distance)
-                bike_lanes_in_buffer = bike_union.intersection(buffered_road)
-
-                if not bike_lanes_in_buffer.is_empty:
-                    total_length = 0.0
-                    # If multiple line segments
-                    if bike_lanes_in_buffer.geom_type == 'MultiLineString':
-                        total_length = sum(line.length for line in bike_lanes_in_buffer.geoms)
-                    elif bike_lanes_in_buffer.geom_type == 'LineString':
-                        total_length = bike_lanes_in_buffer.length
-
-                    if total_length > 0:
-                        total_intersections += 1
-                        bike_lengths.append(total_length)
-                    else:
-                        bike_lengths.append(0.0)
-                else:
-                    bike_lengths.append(0.0)
-            except Exception as e:
-                print(f"Error calculating intersection for segment {idx}: {str(e)}")
-                bike_lengths.append(0.0)
-
-        # 4) Add raw bike lane length to dataframe
-        roads_gdf['bike_length'] = bike_lengths
-
-        # 5) Calculate the length of bike lanes per mile of road
-        if 'segment_length' not in roads_gdf.columns:
-            roads_gdf['segment_length'] = roads_gdf.geometry.length
-
-        # Avoid division by zero
-        roads_gdf['bike_ln_per_mile'] = 0.0
-        non_zero_mask = roads_gdf['segment_length'] > 0
-        roads_gdf.loc[non_zero_mask, 'bike_ln_per_mile'] = (
-            roads_gdf.loc[non_zero_mask, 'bike_length'] / roads_gdf.loc[non_zero_mask, 'segment_length']
-        ) * 5280
-
-        # Debug information
-        print("\nBike lane statistics:")
-        print(f"Total bike length: {sum(bike_lengths):.1f}")
-        print(f"Max bike length: {max(bike_lengths):.1f}")
-        print(f"Number of non-zero bike lengths: {sum(1 for x in bike_lengths if x > 0)}")
-        print(f"\nTotal bike lane intersections found: {total_intersections}")
-        print(f"Average nearby bike lane length: {np.mean(bike_lengths):.1f}")
-        print(f"Segments with any nearby bike lanes: {sum(1 for x in bike_lengths if x > 0)}")
-        print(f"Maximum nearby bike lane length: {max(bike_lengths):.1f}")
-
-        print("\nBike lane per mile statistics:")
-        print(f"Mean bike lanes per mile: {roads_gdf['bike_ln_per_mile'].mean():.2f}")
-        print(f"Max bike lanes per mile: {roads_gdf['bike_ln_per_mile'].max():.2f}")
-
-        return roads_gdf
-
-    except Exception as e:
-        print(f"Error in bike lane processing: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        raise

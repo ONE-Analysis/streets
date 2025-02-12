@@ -13,14 +13,16 @@ def main():
     # ---------------------------
     # 1. Define file paths.
     # You can switch between different files by commenting/uncommenting the desired options.
-    input_geojson = ("/Users/oliveratwood/One Architecture Dropbox/_ONE LABS/[ Side Projects ]/ONE-Labs-Github/streets/output/all_segments_CoolPavement.geojson")
-    output_csv = ("/Users/oliveratwood/One Architecture Dropbox/_NYC PROJECTS/P2415_CSC Year Two/09 Grant Applications/250224_DOT_PROTECT/2_Research/CoolPavementAnalysisOutput/citywide.csv")
+    # input_geojson = ("/Users/oliveratwood/One Architecture Dropbox/_ONE LABS/[ Side Projects ]/ONE-Labs-Github/streets/output/all_segments_CoolPavement.geojson")
+    # output_csv = ("/Users/oliveratwood/One Architecture Dropbox/_NYC PROJECTS/P2415_CSC Year Two/09 Grant Applications/250224_DOT_PROTECT/2_Research/CoolPavementAnalysisOutput/citywide.csv")
     # input_geojson = ('/Users/oliveratwood/One Architecture Dropbox/_ONE LABS/[ Side Projects ]/ONE-Labs-Github/streets/output/East_New_York/all_segments_CoolPavement.geojson')
     # output_csv = ('/Users/oliveratwood/One Architecture Dropbox/_NYC PROJECTS/P2415_CSC Year Two/09 Grant Applications/250224_DOT_PROTECT/2_Research/CoolPavementAnalysisOutput/EastNewYork.csv')
     # input_geojson = ('/Users/oliveratwood/One Architecture Dropbox/_ONE LABS/[ Side Projects ]/ONE-Labs-Github/streets/output/Concourse/all_segments_CoolPavement.geojson')
     # output_csv = ('/Users/oliveratwood/One Architecture Dropbox/_NYC PROJECTS/P2415_CSC Year Two/09 Grant Applications/250224_DOT_PROTECT/2_Research/CoolPavementAnalysisOutput/Concourse.csv')
     # input_geojson = ('/Users/oliveratwood/One Architecture Dropbox/_ONE LABS/[ Side Projects ]/ONE-Labs-Github/streets/output/East_Harlem/all_segments_CoolPavement.geojson')
     # output_csv = ('/Users/oliveratwood/One Architecture Dropbox/_NYC PROJECTS/P2415_CSC Year Two/09 Grant Applications/250224_DOT_PROTECT/2_Research/CoolPavementAnalysisOutput/EastHarlem.csv')
+    input_geojson = ('/Users/oliveratwood/One Architecture Dropbox/_ONE LABS/[ Side Projects ]/ONE-Labs-Github/streets/output/Brownsville/all_segments_CoolPavement.geojson')
+    output_csv = ('/Users/oliveratwood/One Architecture Dropbox/_NYC PROJECTS/P2415_CSC Year Two/09 Grant Applications/250224_DOT_PROTECT/2_Research/CoolPavementAnalysisOutput/Brownsville.csv')
 
     
     # ---------------------------

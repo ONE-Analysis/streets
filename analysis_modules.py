@@ -11,21 +11,19 @@ from rasterio.windows import Window
 from shapely.ops import linemerge, unary_union
 from shapely.validation import make_valid
 from shapely import make_valid as shapely_make_valid  # rename if needed
+from rasterio import features
+from rasterio.transform import from_origin
+from rasterio.io import MemoryFile
+from rasterstats import zonal_stats
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
-
 import folium
-
 import zipfile
 import io
 import warnings
 from pathlib import Path
-from data_preprocessing import process_bike_lanes
 
-# ------------------------------------
-# Data Processing Classes
-# ------------------------------------
 import os
 import pandas as pd
 import geopandas as gpd
@@ -35,7 +33,9 @@ from shapely.ops import unary_union
 from shapely.validation import make_valid
 from tqdm.auto import tqdm
 
-
+# ------------------------------------
+# Data Processing Classes
+# ------------------------------------
 class DataProcessors:
     def __init__(self):
         pass
@@ -730,118 +730,134 @@ def process_bus_stops(roads, input_dir, crs):
 # ------------------------------------
 # Population Assessment
 # ------------------------------------
-def incorporate_population_density(roads, input_dir, buffer_ft=1000):
+def incorporate_population_density(roads, input_dir, buffer_ft=1000, resolution=10):
     """
-    Load pre-generated NYC blocks with population data,
-    then compute pop_density for each road and pop_dens_indx from it.
+    Improved population density analysis using a raster-based approach.
+    
+    For each road segment, a buffer is created and the total population within that
+    buffer is estimated using zonal statistics on a rasterized representation of 
+    population density (people per square foot). The estimated population is then 
+    divided by the buffer area (converted to square miles) to yield a population 
+    density in people per square mile. A normalized index is also created.
+    
+    Parameters:
+      roads (GeoDataFrame): The roads dataset.
+      input_dir (str): Path to input files.
+      buffer_ft (float): Buffer distance around each road in feet.
+      resolution (float): Resolution of the output raster in feet per pixel.
+    
+    Returns:
+      roads (GeoDataFrame): Updated roads with 'pop_density' (people per square mile)
+                             and 'pop_dens_indx' (normalized index).
     """
     import os
+    import numpy as np
     import geopandas as gpd
+    from rasterio import features
+    from rasterio.transform import from_origin
+    from rasterstats import zonal_stats
     from analysis_modules import DataProcessors
+
+    # Conversion factor: 1 square foot = 3.587e-8 square miles.
+    SQFT_TO_SQMILE = 3.587e-8
 
     # Load the pre-generated blocks with population data
     blocks_file = os.path.join(input_dir, "nyc_blocks_with_pop.geojson")
     if not os.path.exists(blocks_file):
         raise FileNotFoundError(f"Blocks file with population data not found at: {blocks_file}")
-
     print("Loading pre-generated blocks with population data...")
     blocks_gdf = gpd.read_file(blocks_file)
-
-    # Ensure correct CRS
-    if str(blocks_gdf.crs) != "EPSG:2263":
-        blocks_gdf = blocks_gdf.to_crs("EPSG:2263")
-    roads = roads.to_crs("EPSG:2263")
-
-    # Estimate population density around each road
-    roads = estimate_population_density(roads, blocks_gdf, buffer_ft=buffer_ft)
-
-    # Create a normalized index from pop_density
-    roads["pop_dens_indx"] = DataProcessors.normalize_to_index(
-        roads["pop_density"],
-        "popdensity"
+    
+    # Ensure CRS is consistent (EPSG:2263)
+    target_crs = "EPSG:2263"
+    if str(blocks_gdf.crs) != target_crs:
+        blocks_gdf = blocks_gdf.to_crs(target_crs)
+    roads = roads.to_crs(target_crs)
+    
+    # Determine the population field.
+    # First preference is "P1_001N" (from your vector-based approach), then fall back.
+    candidate_fields = ["P1_001N", "population", "pop", "Population", "POPULATION"]
+    pop_field = None
+    for field in candidate_fields:
+        if field in blocks_gdf.columns:
+            pop_field = field
+            break
+    if pop_field is None:
+        raise KeyError("No population field found in blocks dataset. Available columns: " + str(blocks_gdf.columns))
+    print(f"Using population field: '{pop_field}'")
+    
+    # For each block, compute the population density (people per square foot)
+    # so that integrating over area yields the total population.
+    # (Assumes the block geometry area is in square feet since CRS is EPSG:2263.)
+    blocks_gdf = blocks_gdf.copy()
+    blocks_gdf["block_area"] = blocks_gdf.geometry.area
+    # Avoid division by zero
+    blocks_gdf["pop_density"] = blocks_gdf.apply(
+        lambda row: row[pop_field] / row["block_area"] if row["block_area"] > 0 else 0, axis=1
     )
+    
+    # Define raster bounds based on the blocks dataset
+    xmin, ymin, xmax, ymax = blocks_gdf.total_bounds
+    width = int(np.ceil((xmax - xmin) / resolution))
+    height = int(np.ceil((ymax - ymin) / resolution))
+    transform = from_origin(xmin, ymax, resolution, resolution)
+    
+    # Rasterize the blocks using the computed population density.
+    # all_touched=True ensures all touched pixels are included.
+    shapes = ((geom, density) for geom, density in zip(blocks_gdf.geometry, blocks_gdf["pop_density"]))
+    population_raster = features.rasterize(
+        shapes=shapes,
+        out_shape=(height, width),
+        transform=transform,
+        fill=0,
+        dtype=np.float32,
+        all_touched=True
+    )
+    pixel_area = resolution * resolution  # in square feet
 
-    return roads
-
-def estimate_population_density(roads, blocks_gdf, buffer_ft=1000):
-    """
-    For each road segment, create a buffer around its geometry (the entire linestring),
-    then estimate population from intersecting Census blocks. Then compute population
-    density (people per square mile).
-    """
-    import geopandas as gpd
-
-    # Constants for conversion (1 sq ft = 3.587e-8 sq miles)
-    SQFT_TO_SQMILE = 3.587e-8
-
-    if roads.crs is None or str(roads.crs) != "EPSG:2263":
-        raise ValueError("Roads must be in EPSG:2263 for population density.")
-    if blocks_gdf.crs is None or str(blocks_gdf.crs) != "EPSG:2263":
-        raise ValueError("Blocks must be in EPSG:2263 for population density.")
-
-    block_sindex = blocks_gdf.sindex
+    # For each road, create a buffer and compute zonal stats.
     pop_estimates = []
-
     for idx, row in roads.iterrows():
-        geom = row.geometry
-        if geom is None or geom.is_empty:
-            pop_estimates.append(0.0)
-            continue
-
-        # Buffer the entire linestring
-        buffer_geom = geom.buffer(buffer_ft)
-
-        # Create a GeoDataFrame from the buffer geometry
-        buffer_gdf = gpd.GeoDataFrame(geometry=[buffer_geom], crs=roads.crs)
-
-        candidate_idxs = list(block_sindex.intersection(buffer_geom.bounds))
-        candidate_blocks = blocks_gdf.iloc[candidate_idxs].copy()
-        if candidate_blocks.empty:
-            pop_estimates.append(0.0)
-            continue
-
-        intersection = gpd.overlay(
-            candidate_blocks,
-            buffer_gdf,
-            how='intersection'
+        buffer_geom = row.geometry.buffer(buffer_ft)
+        # zonal_stats will sum the density values (people/ft²) over the pixels in the buffer.
+        # Multiply the sum by pixel_area to recover an estimate of total population.
+        stats = zonal_stats(
+            [buffer_geom],
+            population_raster,
+            affine=transform,
+            stats=['sum'],
+            nodata=0,
+            all_touched=True
         )
-
-        if intersection.empty:
-            pop_estimates.append(0.0)
-            continue
-
-        intersection["intersect_area"] = intersection.geometry.area
-        candidate_blocks["block_area"] = candidate_blocks.geometry.area
-
-        intersection = intersection.merge(
-            candidate_blocks[["GEOID20", "block_area", "P1_001N"]],
-            on="GEOID20", how="left", suffixes=("", "_block")
-        )
-
-        intersection["proportion"] = intersection["intersect_area"] / intersection["block_area"]
-        intersection["weighted_pop"] = intersection["proportion"] * intersection["P1_001N_block"]
-        total_pop = intersection["weighted_pop"].sum()
-
+        # Estimated total population in the buffer:
+        estimated_population = stats[0]['sum'] * pixel_area if stats[0]['sum'] is not None else 0.0
+        # Compute the area of the buffer in square feet
         buffer_area = buffer_geom.area
-        if buffer_area <= 0:
-            pop_estimates.append(0.0)
-            continue
-
-        # Convert area to square miles and calculate density
-        buffer_area_sqmile = buffer_area * SQFT_TO_SQMILE
-        pop_density = total_pop / buffer_area_sqmile
-        pop_estimates.append(pop_density)
-
+        # Convert buffer area to square miles
+        buffer_area_mi2 = buffer_area * SQFT_TO_SQMILE if buffer_area > 0 else 0.0
+        # Compute population density (people per square mile)
+        density = estimated_population / buffer_area_mi2 if buffer_area_mi2 > 0 else 0.0
+        pop_estimates.append(density)
+    
     roads["pop_density"] = pop_estimates
 
-    # Print some statistics about the population density
+    # Print summary statistics
     print("\nPopulation density statistics (people/sq mile):")
     print(f"Mean: {roads['pop_density'].mean():,.1f}")
     print(f"Median: {roads['pop_density'].median():,.1f}")
     print(f"Range: {roads['pop_density'].min():,.1f} - {roads['pop_density'].max():,.1f}")
-
+    
+    # Create a normalized index using the DataProcessors class.
+    roads["pop_dens_indx"] = DataProcessors.normalize_to_index(
+        roads["pop_density"],
+        "popdensity"
+    )
+    
     return roads
 
+# ------------------------------------
+# Commercial Area Assessment
+# ------------------------------------
 def process_commercial_area(roads_gdf, input_dir, buffer_distance):
     """
     Summarize the commercial area density (ComArea) around each road segment within 'buffer_distance' (in feet).
@@ -966,11 +982,11 @@ def merge_street_segments(roads, min_segment_length):
         length_weighted_cols = [
             'pav_rate', 'heat_mean', 'tree_pct', 'hvi_raw', 'pop_density',
             'pave_indx', 'heat_indx', 'tree_indx', 'vuln_indx', 'pop_dens_indx',
-            'bike_ln_per_mile'
+            'bike_ln_per_mile', 'SidewalkIndex', 'StreetWidth_Min', 'RoadWidthIndex'
         ]
 
         sum_cols = [
-            'vuln_length', 'intersections', 'bus_stop_count', 'bike_length', 'ComArea'
+            'vuln_length', 'intersections', 'bus_stop_count', 'bike_length', 'ComArea', 'sidewalk_area'
         ]
 
         # We'll skip geometry, StreetCode, etc. from these dicts since we handle them separately
@@ -1169,7 +1185,7 @@ class FinalAnalysis:
         print("Calculating priority index...")
 
         working_df = roads.copy()
-        priority_count = analysis_params.get('priority_threshold', 100)
+        priority_count = analysis_params.get('number_of_top_roads', 100)
         print(f"Using priority threshold of {priority_count} segments")
 
         # Weighted index approach
@@ -1184,8 +1200,9 @@ class FinalAnalysis:
             'BikeLnIndx': weights.get('BikeLnIndx', 0),
             'PedIndex': weights.get('PedIndex', 0),
             'pop_dens_indx': weights.get('pop_dens_indx', 0),
-            'ComIndex': weights.get('ComIndex', 0)
-
+            'ComIndex': weights.get('ComIndex', 0),
+            'SidewalkIndex': weights.get('SidewalkIndex', 0),
+            'RoadWidthIndex': weights.get('RoadWidthIndex', 0)
         }
 
         # Check sum
@@ -1257,6 +1274,9 @@ def export_results(results_dict, config):
                 'PedRank',         # Pedestrian Mobility Priority
                 'pop_density',     # Population density
                 'ComArea',         # Commercial Area
+                'sidewalk_area',   # Sidewalk Area
+                'StreetWidth_Min',  # Road Width
+
 
                 # Index values
                 # 'traf_indx',       # Traffic index
@@ -1269,6 +1289,8 @@ def export_results(results_dict, config):
                 'PedIndex',        # Pedestian mobility index
                 'pop_dens_indx',   # Population density index
                 'ComIndex',        # Commercial Area index
+                'SidewalkIndex',   # Sidewalk index
+                'RoadWidthIndex',  # Road Width Index
 
                 # Priority results
                 'priority',
@@ -1316,9 +1338,9 @@ def run_neighborhood_analysis(config):
         FinalAnalysis,
         export_results,
         incorporate_population_density,
-        build_webmap,
         process_commercial_area   # if you have a separate function for ComArea
     )
+    from webmap import build_webmap
 
     # -------------------------------------------------------------------------
     # 1) Load neighborhood boundaries
@@ -1446,7 +1468,13 @@ def run_neighborhood_analysis(config):
         if 'ComArea' in nbhd_roads.columns:
             nbhd_roads['ComIndex'] = DataProcessors.normalize_to_index(nbhd_roads['ComArea'], 'basic')
 
-        # (Add any other fields you want to re-min-max, e.g., PedRank -> PedIndex, etc.)
+        # Sidewalk
+        if 'sidewalk_area' in nbhd_roads.columns:
+            nbhd_roads['SidewalkIndex'] = DataProcessors.normalize_to_index(nbhd_roads['sidewalk_area'], 'basic')        # (Add any other fields you want to re-min-max, e.g., PedRank -> PedIndex, etc.)
+
+        # Road Width
+        if 'StreetWidth_Min' in nbhd_roads.columns:
+            nbhd_roads['RoadWidthIndex'] = DataProcessors.normalize_to_index(nbhd_roads['StreetWidth_Min'], 'basic')        # (Add any other fields you want to re-min-max, e.g., PedRank -> PedIndex, etc.)
 
         # ---------------------------------------------------------------------
         # 4D) Now run final priority analysis
@@ -1498,390 +1526,4 @@ def run_neighborhood_analysis(config):
         print(f"Completed processing for {nbhd_name}")
 
     print("\nNeighborhood analysis complete!")
-
-# ------------------------------------
-# Webmap Builder
-# ------------------------------------
-def build_webmap(scenario_geojsons, config, neighborhood_name=None):
-    """
-    Create a single HTML folium map with heat-map style visualization 
-    and detailed popups showing raw and index values.
-    """
-    import folium
-    import geopandas as gpd
-    import pandas as pd
-    import os
-    import numpy as np
-
-    print(f"\nBuilding layered HTML webmap{' for ' + neighborhood_name if neighborhood_name else ''}...")
-
-    def get_color(priority_score, feature_collection):
-        """Returns color based on priority score normalization."""
-        if pd.isna(priority_score):
-            return '#808080'  # gray for missing values
-
-        colors = ['#FFE066', '#FFB84D', '#FF9933', '#FF7A1A', '#FF5C00', '#E63D00', '#CC0000']
-
-        priorities = [f['properties'].get('priority') for f in feature_collection['features'] 
-                     if f['properties'].get('priority') is not None]
-        min_priority = min(priorities)
-        max_priority = max(priorities)
-
-        normalized_score = (0 if max_priority == min_priority 
-                          else (priority_score - min_priority) / (max_priority - min_priority))
-        idx = int(np.floor(normalized_score * (len(colors) - 1)))
-        return colors[max(0, min(idx, len(colors) - 1))]
-
-    def style_function(feature, feature_collection):
-        """Style function for GeoJSON features."""
-        priority = feature['properties'].get('priority', None)
-        return {
-            'color': get_color(priority, feature_collection),
-            'weight': 3,
-            'opacity': 0.8
-        }
-
-    def create_popup_content(properties):
-        """Creates detailed HTML popup content with raw and index values."""
-        try:
-            # Helper function to format values safely
-            def format_value(value, format_spec, default='N/A'):
-                if value is None:
-                    return default
-                try:
-                    if isinstance(value, (int, float)):
-                        return format_spec.format(value)
-                    return str(value)
-                except:
-                    return default
-
-            return f"""
-            <div style="font-family: Arial; min-width: 200px; max-width: 300px;">
-                <h4 style="margin-bottom: 10px; border-bottom: 1px solid #ccc;">
-                    {properties.get('Street', 'N/A')}
-                </h4>
-
-                <div style="margin-bottom: 10px;">
-                    <b>Raw Values</b><br>
-                    • Average Pavement Rating: {format_value(properties.get('pav_rate'), '{:.1f}')}<br>
-                    • Average Summer Heat: {format_value(properties.get('heat_mean'), '{:.1f}')} (°F)<br>
-                    • Tree Canopy: {format_value(properties.get('tree_pct'), '{:.1f}')}%<br>
-                    • Heat Vulnerability Index Average: {format_value(properties.get('hvi_raw'), '{:.2f}')}<br>
-                    • Bus Stop Density: ~{format_value(properties.get('BusStpDens'), '{:,.0f}')} Stops per Mile<br>
-                    • Bike Lane Density: {format_value(properties.get('bike_length', 0), '{:,.0f}')} ft Bike Lane per Mile<br>
-                    • Pedestrian Mobility Priority: {format_value(properties.get('PedRank', 0), '{:,.0f}')}<br>
-                    • Population Density: ~{format_value(properties.get('pop_density'), '{:,.0f}')} People per Square Mile<br>
-                    • Commercial Area: ~{format_value(properties.get('ComArea'), '{:,.0f}')} nearby sq ft per 1 ft of road
-                </div>
-
-                <div style="margin-bottom: 10px;">
-                    <b>Index Values</b><br>
-                    • Pavement: {format_value(properties.get('pave_indx'), '{:.3f}')}<br>
-                    • Heat: {format_value(properties.get('heat_indx'), '{:.3f}')}<br>
-                    • Tree Canopy: {format_value(properties.get('tree_indx'), '{:.3f}')}<br>
-                    • Heat Vulnerability: {format_value(properties.get('vuln_indx'), '{:.3f}')}<br>
-                    • Bus Stops: {format_value(properties.get('BusDensInx'), '{:.3f}')}<br>
-                    • Bike Lanes: {format_value(properties.get('BikeLnIndx'), '{:.3f}')}<br>
-                    • Pedestrian Mobility: {format_value(properties.get('PedIndex'), '{:.3f}')}<br>
-                    • Population Density: {format_value(properties.get('pop_dens_indx'), '{:.3f}')}<br>
-                    • Commercial Area: {format_value(properties.get('ComIndex'), '{:.3f}')}
-
-                </div>
-
-                <div style="font-weight: bold; color: #CC0000;">
-                    Priority Score: {format_value(properties.get('priority'), '{:.3f}')}
-                </div>
-            </div>
-            """
-        except Exception as e:
-            print(f"Error creating popup content: {str(e)}")
-            return "<div>Error creating popup content</div>"
-
-    # Load and process neighborhoods
-    neighborhoods_4326 = None
-    neighborhoods_path = os.path.join(config.input_dir, "CSC_Neighborhoods.geojson")
-    if os.path.exists(neighborhoods_path):
-        try:
-            neighborhoods_gdf = gpd.read_file(neighborhoods_path)
-            if neighborhoods_gdf.crs is None:
-                neighborhoods_gdf.set_crs("EPSG:2263", inplace=True)
-            neighborhoods_4326 = neighborhoods_gdf.to_crs("EPSG:4326")
-            if neighborhood_name:
-                neighborhoods_4326 = neighborhoods_4326[
-                    neighborhoods_4326['Name'] == neighborhood_name
-                ]
-        except Exception as e:
-            print(f"Warning: Could not process neighborhoods file: {str(e)}")
-
-    # Calculate bounds and process scenarios
-    bounds_list = []
-    if neighborhoods_4326 is not None and not neighborhoods_4326.empty:
-        bounds_list.append(neighborhoods_4326.total_bounds)
-
-    scenario_data = {}
-    for scenario_name, reprojected_path in scenario_geojsons.items():
-        if not os.path.exists(reprojected_path):
-            continue
-        try:
-            gdf = gpd.read_file(reprojected_path)
-            if gdf.crs is None:
-                gdf.set_crs("EPSG:2263", inplace=True)
-            gdf_4326 = gdf.to_crs("EPSG:4326")
-            bounds_list.append(gdf_4326.total_bounds)
-            scenario_data[scenario_name] = gdf_4326
-        except Exception as e:
-            print(f"Warning: Could not process {scenario_name}: {str(e)}")
-            continue
-
-    # Create base map
-    if bounds_list:
-        bounds_array = np.array(bounds_list)
-        center_lat = (bounds_array[:, 1].min() + bounds_array[:, 3].max()) / 2
-        center_lon = (bounds_array[:, 0].min() + bounds_array[:, 2].max()) / 2
-    else:
-        center_lat, center_lon = 40.7128, -74.0060
-
-    m = folium.Map(
-        location=[center_lat, center_lon],
-        zoom_start=14 if neighborhood_name else 12,
-        tiles="CartoDB Positron"
-    )
-
-    # Add title
-    title_html = f'''
-    <div style="position: fixed; 
-                top: 20px; 
-                left: 12%; 
-                transform: translateX(-50%);
-                z-index: 1000;
-                background-color: white;
-                padding: 10px;
-                border: 2px solid grey;
-                border-radius: 5px;
-                font-size: 16px;
-                font-weight: bold;
-                font-family: Arial;">
-        {list(scenario_geojsons.keys())[0]} Roads
-    </div>
-    '''
-
-    m.get_root().html.add_child(folium.Element(title_html))
-
-    # Add FOZ layer
-    foz_path = os.path.join(config.input_dir, 'FOZ_NYC_Merged.geojson')
-    if os.path.exists(foz_path):
-        try:
-            foz_gdf = gpd.read_file(foz_path)
-            if foz_gdf.crs is None or foz_gdf.crs != "EPSG:4326":
-                foz_gdf = foz_gdf.to_crs("EPSG:4326")
-            folium.GeoJson(
-                foz_gdf,
-                name="Federal Opportunity Zones",
-                style_function=lambda x: {
-                    'fillColor': 'blue',
-                    'color': 'blue',
-                    'weight': 0.5,
-                    'fillOpacity': 0.05,
-                    'opacity': 1.0
-                }
-            ).add_to(m)
-        except Exception as e:
-            print(f"Warning: Could not process FOZ file: {str(e)}")
-
-    # Add Persistent Poverty layer
-    poverty_path = os.path.join(config.input_dir, 'nyc_persistent_poverty.geojson')
-    if os.path.exists(poverty_path):
-        try:
-            poverty_gdf = gpd.read_file(poverty_path)
-            if poverty_gdf.crs is None or poverty_gdf.crs != "EPSG:4326":
-                poverty_gdf = poverty_gdf.to_crs("EPSG:4326")
-            folium.GeoJson(
-                poverty_gdf,
-                name="Persistent Poverty Areas",
-                style_function=lambda x: {
-                    'fillColor': 'green',
-                    'color': 'green',
-                    'weight': 0.5,
-                    'fillOpacity': 0.05,
-                    'opacity': 1.0
-                }
-            ).add_to(m)
-        except Exception as e:
-            print(f"Warning: Could not process persistent poverty file: {str(e)}")
-
-
-    # Add neighborhoods layer
-    if neighborhoods_4326 is not None and not neighborhoods_4326.empty:
-        folium.GeoJson(
-            neighborhoods_4326,
-            name="CSC_Neighborhoods",
-            style_function=lambda x: {
-                "color": "gray",
-                "weight": 1,
-                "fillOpacity": 0.1
-            }
-        ).add_to(m)
-
-    legend_html = """
-    <div style="
-        position: fixed; 
-        bottom: 50px; 
-        right: 50px; 
-        z-index: 1000;
-        background: white; 
-        padding: 10px; 
-        border: 2px solid grey;
-        border-radius: 5px;
-        ">
-        <h4 style="margin-bottom: 10px;">Legend</h4>
-        <div style="display: flex; flex-direction: column; gap: 10px;">
-            <div>
-                <h5 style="margin: 5px 0;">Road Priority Score</h5>
-                <div style="display: flex; flex-direction: column; gap: 5px;">
-    """
-
-    colors = ['#CC0000', '#E63900', '#FF4D00', '#FF6B1A', 
-              '#FF8533', '#FF9940', '#FFB366']
-    labels = ['1.0', '0.83', '0.67', '0.5', '0.33', '0.17', '0.0']
-
-    for color, label in zip(colors, labels):
-        legend_html += f"""
-            <div style="display: flex; align-items: center; gap: 5px;">
-                <div style="width: 20px; height: 3px; background: {color};"></div>
-                <span>{label}</span>
-            </div>
-        """
-
-
-    legend_html += """
-                </div>
-            </div>
-            <div>
-                <h5 style="margin: 5px 0;">Area Overlays</h5>
-                <div style="display: flex; flex-direction: column; gap: 5px;">
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background: gray; opacity: 0.2; border: 1px solid gray;"></div>
-                        <span>CSC Neighborhoods</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background: green; opacity: 0.1; border: 1px solid green;"></div>
-                        <span>Persistent Poverty Areas</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background: blue; opacity: 0.1; border: 1px solid blue;"></div>
-                        <span>Federal Opportunity Zones</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    """
-
-    # Create a custom Legend element
-    legend = folium.Element(legend_html)
-
-    # Add the legend to the map
-    m.get_root().html.add_child(legend)
-
-    # Add scenario layers with popups
-    for scenario_name, gdf_4326 in scenario_data.items():
-        geojson_data = gdf_4326.__geo_interface__
-
-        def style_callback(feature):
-            return style_function(feature, geojson_data)
-
-        gjson = folium.GeoJson(
-            gdf_4326,
-            name=scenario_name,
-            style_function=style_callback,
-            tooltip=folium.GeoJsonTooltip(
-                fields=['priority'],
-                aliases=['Priority Score:'],
-                sticky=False,
-                labels=True,
-                style="""
-                    background-color: white;
-                    border: 2px solid black;
-                    border-radius: 3px;
-                    box-shadow: 3px;
-                """
-            )
-        )
-
-        # Add popups
-        for feature in gjson.data['features']:
-            if feature['properties'] is not None:
-                popup_content = create_popup_content(feature['properties'])
-                if popup_content:
-                    folium.Popup(popup_content, max_width=300).add_to(
-                        folium.GeoJson(
-                            feature,
-                            style_function=style_callback
-                        ).add_to(gjson)
-                    )
-
-        gjson.add_to(m)
-
-
-    folium.LayerControl(collapsed=False).add_to(m)
-
-    # Save map
-    html_map_path = os.path.join(
-        config.output_dir,
-        f"{scenario_name}_webmap{'_' + neighborhood_name.replace(' ', '_') if neighborhood_name else ''}.html"
-    )
-    m.save(html_map_path)
-    print(f"Webmap saved to: {html_map_path}")
-
-    return html_map_path
-
-
-
-def generate_webmap(results_dict, exported_paths, config):
-    """Generate the webmap using exported GeoJSON files."""
-    try:
-        print("\nGenerating interactive HTML maps...")
-
-        # Check if we have any valid GeoJSON files
-        valid_geojsons = {
-            scenario: path for scenario, path in exported_paths.items()
-            if os.path.exists(path)
-        }
-
-        if not valid_geojsons:
-            print("Warning: No GeoJSON files found for HTML map generation")
-            return None
-
-        webmap_paths = []
-        # Generate a separate webmap for each scenario
-        for scenario_name, geojson_path in valid_geojsons.items():
-            scenario_geojsons = {scenario_name: geojson_path}
-            webmap_path = build_webmap(scenario_geojsons, config)
-            if webmap_path:
-                webmap_paths.append(webmap_path)
-                print(f"Generated webmap for {scenario_name} at: {webmap_path}")
-
-        return webmap_paths
-
-    except Exception as e:
-        print(f"Error generating webmap: {str(e)}")
-        return None
-
-# Usage example:
-def run_exports_and_webmap(results_dict, config):
-    """Run the full export and webmap generation process."""
-    try:
-        # Export results to GeoJSON
-        exported_paths = export_results(results_dict, config)
-
-        # Generate webmap
-        if exported_paths:
-            webmap_path = generate_webmap(results_dict, exported_paths, config)
-            if webmap_path:
-                print(f"Successfully generated webmap at: {webmap_path}")
-        else:
-            print("No results were exported, skipping webmap generation")
-
-    except Exception as e:
-        print(f"Error in export and webmap process: {str(e)}")
 
