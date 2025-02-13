@@ -15,9 +15,8 @@ from analysis_modules import (
     incorporate_population_density,
     process_commercial_area
 )
+from webmap import build_webmap, generate_webmap
 
-from webmap import build_webmap
-from webmap import generate_webmap
 def main():
     """
     Main entry point for the NYC Cool Corridors Analysis (Citywide).
@@ -43,6 +42,7 @@ def main():
     logging.info("\n=== STEP 2: Processing basic attributes ===")
     roads = DataProcessors.batch_process_all(roads, config.input_dir)
     logging.info("Basic attributes processing complete")
+
 
     # 4) Process temperature data
     print("\nProcessing temperature data...")
@@ -94,30 +94,31 @@ def main():
     roads['ComIndex'] = data_processor.normalize_to_index(roads['ComArea'], attribute_type='standard')
     print(f"ComIndex stats: min={roads['ComIndex'].min():.3f}, max={roads['ComIndex'].max():.3f}, mean={roads['ComIndex'].mean():.3f}")
 
-    # 8) Merge road segments
+    # 9) Merge road segments
     print("\nMerging street segments...")
     merged_roads = merge_street_segments(roads, config.analysis_params["min_segment_length"])
     log_memory_usage()
 
-    # 9) Calculate final priority for the Cool Corridors scenario
-    print("\nCalculating final priorities for Cool Corridors scenario...")
-    analyzer = FinalAnalysis({'CoolCorridors': config.weight_scenarios['CoolCorridors']})
+    # 10) Calculate final priority for BOTH weight scenarios
+    print("\nCalculating final priorities for weight scenarios...")
+    analyzer = FinalAnalysis(config.weight_scenarios)
     results = analyzer.run_all_scenarios(merged_roads, config.analysis_params)
-    scenario_data = results.get('CoolCorridors')
-    if scenario_data is not None:
-        print(f"\n=== Summary for CoolCorridors Scenario ===")
-        priority_count = scenario_data['is_priority'].sum()
-        total_count = len(scenario_data)
-        print(f"Total segments analyzed: {total_count}")
-        print(f"High priority segments: {priority_count} ({(priority_count/total_count)*100:.1f}%)")
-        print(f"Mean priority score: {scenario_data['priority'].mean():.3f}")
-    else:
-        print("No results found for CoolCorridors scenario.")
 
-    print("\nColumns in merged_roads:", list(merged_roads.columns))
+    for scenario, scenario_data in results.items():
+        print(f"\n=== Summary for {scenario} Scenario ===")
+        if "priority" in scenario_data.columns:
+            # Use the median of the "priority" values as a cutoff for high priority
+            priority_threshold = scenario_data["priority"].median()
+            priority_count = (scenario_data["priority"] >= priority_threshold).sum()
+            total_count = len(scenario_data)
+            print(f"Total segments analyzed: {total_count}")
+            print(f"High priority segments: {priority_count} ({(priority_count/total_count)*100:.1f}%)")
+            print(f"Mean priority score: {scenario_data['priority'].mean():.3f}")
+        else:
+            print(f"No 'priority' column found in the results for scenario {scenario}. Skipping priority summary.")
 
-    # 10) Export final results and generate a webmap
-    print("\nExporting results and generating webmap...")
+    # 11) Export final results and generate a webmap for each scenario
+    print("\nExporting results and generating webmaps...")
     try:
         exported_paths = export_results(results_dict=results, config=config)
         if exported_paths:

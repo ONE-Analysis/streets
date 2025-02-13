@@ -25,8 +25,8 @@ class CoolCorridorsConfig:
 
         # Specific parameters for each analysis type
         citywide_specific = {
-            'number_of_top_roads': 100,
-            'min_segment_length': 1320, # 1/4 mile
+            'number_of_top_roads': 300,
+            'min_segment_length': 1320,  # 1/4 mile
         }
 
         neighborhood_specific = {
@@ -40,19 +40,9 @@ class CoolCorridorsConfig:
         elif analysis_type.lower() == 'neighborhood':
             self.analysis_params.update(neighborhood_specific)
 
-        # Cool Corridors weight scenario:
+        # Define both weight scenarios – listing all indices even if some are 0.
+        # Weight scenarios for analysis:
         self.weight_scenarios = {
-            # 'CoolPavement': {
-            #     'PavementIndex': 0.25,          # uses 'v' shaped suitability
-            #     'HeatHazIndex': 0,            # raw heat values from summers 2021-2024
-            #     'TreeCanopyIndex': 0.1,        # assessment of tree canopy percentage
-            #     'HeatVulnerabilityIndex': 0.1, # heat vulnerability index values
-            #     'BusDensInx': 0,             # bus stops per mile
-            #     'BikeLnIndx': 0.1,             # bike lane length per mile
-            #     'PedIndex': 0.2,                  # road prioritization in NYC Pedestrian Mobility Plan
-            #     'pop_dens_indx': 0.25,          # people per square mile within 1000' buffer
-            #     'ComIndex': 0                   # commercial space within 1000' buffer
-            # },
             'CoolCorridors': {
                 'PavementIndex': 0,
                 'HeatHazIndex': 0,
@@ -65,7 +55,112 @@ class CoolCorridorsConfig:
                 'ComIndex': 0.2,
                 'SidewalkIndex': 0.1,
                 'RoadWidthIndex': 0.1
+            },
+            'CoolPavement': {
+                'PavementIndex': 0.25,
+                'HeatHazIndex': 0,
+                'HeatVulnerabilityIndex': 0.1,
+                'BusDensInx': 0,
+                'BikeLnIndx': 0.1,
+                'PedIndex': 0.2,
+                'pop_dens_indx': 0.25,
+                'TreeCanopyIndex': 0.1,
+                'ComIndex': 0,
+                'SidewalkIndex': 0,
+                'RoadWidthIndex': 0
             }
+        }
+
+        # Data dictionary for input datasets / metrics.
+        self.dataset_info = {
+            "PavementIndex": {
+                "alias": "PavementIndex",
+                "name": "Pavement",
+                "description": "Prioritizes very high or very low ratings (Street Pavement Rating, DOT)",
+                "prefix": "",
+                "suffix": "",
+                "hex": "#E2E8F0"
+            },
+            "HeatHazIndex": {
+                "alias": "HeatHazIndex",
+                "name": "Heat Hazard",
+                "description": "Priorizizes higher heat hazard areas (daytime summer temperature, Landsat via Google Earth Engine)",
+                "prefix": "",
+                "suffix": "",
+                "hex": "#FDB5B5"
+            },
+            "HeatVulnerabilityIndex": {
+                "alias": "HeatVulnerabilityIndex",
+                "name": "Heat Vulnerability",
+                "description": "Prioritizes higher HVI areas (Heat Vulnerability Index)",
+                "prefix": "",
+                "suffix": "",
+                "hex": "#ebc5a9"
+            },
+            "BusDensInx": {
+                "alias": "BusDensInx",
+                "name": "Bus Stop Density",
+                "description": "Prioritizes higher density of bus stops",
+                "prefix": "~",
+                "suffix": " Stops per Mile",
+                "hex": "#93C5FD"
+            },
+            "BikeLnIndx": {
+                "alias": "BikeLnIndx",
+                "name": "Bike Lane Density",
+                "description": "Prioritizes higher bike lane presence (NYC Bike Lanes)",
+                "prefix": "",
+                "suffix": " ft per Mile",
+                "hex": "#BBF7D0"
+            },
+            "PedIndex": {
+                "alias": "PedIndex",
+                "name": "Pedestrian Demand",
+                "description": "Prioritizes higher pedestrian demand rating (Pedestrian Mobility Plan)",
+                "prefix": "",
+                "suffix": "",
+                "hex": "#BFDBFE"
+            },
+            "pop_dens_indx": {
+                "alias": "pop_dens_indx",
+                "name": "Population Density",
+                "description": "Prioritizes higher population density within 1000 ft (US Census, 2020)",
+                "prefix": "~",
+                "suffix": " People per Sq Mile",
+                "hex": "#DDD6FE"
+            },
+            "TreeCanopyIndex": {
+                "alias": "TreeCanopyIndex",
+                "name": "Tree Canopy Gap",
+                "description": "Prioritizes lower tree canopy coverage (LiDAR-based 6in Land Cover, 2021)",
+                "prefix": "",
+                "suffix": " %",
+                "hex": "#bcebc1"
+            },
+            "ComIndex": {
+                "alias": "ComIndex",
+                "name": "Commercial Activity",
+                "description": "Prioritizes higher commercial or mixed-use building areas within 1000 ft",
+                "prefix": "~",
+                "suffix": " sq ft",
+                "hex": "#FDE68A"
+            },
+            "SidewalkIndex": {
+                "alias": "SidewalkIndex",
+                "name": "Sidewalk Availability",
+                "description": "Prioritizes very wide and very small sidewalks",
+                "prefix": "",
+                "suffix": " sq ft",
+                "hex": "#e7f0b6"
+            },
+            "RoadWidthIndex": {
+                "alias": "RoadWidthIndex",
+                "name": "Road Width",
+                "description": "Prioritizes higher-width roads (LION Roads Data)",
+                "prefix": "",
+                "suffix": " ft",
+                "hex": "#94A3B8"
+            } 
         }
 
         # Ensure directories exist
