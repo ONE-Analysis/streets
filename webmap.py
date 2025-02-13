@@ -139,37 +139,6 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
         zoom_control=False
     )
 
-    # Add the scenario layer with custom tooltip and popups
-    if scenario_data:
-        gdf_4326 = scenario_data[scenario_name]
-        geojson_data = gdf_4326.__geo_interface__
-        def style_callback(feature):
-            return style_function(feature, geojson_data)
-        gjson = folium.GeoJson(
-            gdf_4326,
-            name=scenario_name,
-            style_function=style_callback,
-            tooltip=folium.GeoJsonTooltip(
-                fields=['tooltip'],
-                aliases=[''],
-                sticky=False,
-                labels=False,
-                style="""
-                    background-color: white;
-                    border: 2px solid black;
-                    border-radius: 15px;
-                    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
-                """
-            )
-        )
-        # Add individual popups using our custom popup content function with dataset_info from config.
-        for feature in geojson_data['features']:
-            if feature['properties'] is not None:
-                popup_content = create_popup_content(feature['properties'], config.dataset_info)
-                folium.Popup(popup_content, max_width=300).add_to(
-                    folium.GeoJson(feature, style_function=style_callback)
-                )
-        gjson.add_to(m)
         
     # ---------------------------------------
     # Add title
@@ -315,6 +284,41 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
         ).add_to(m)
     except Exception as e:
         print(f"Warning: Could not fetch FEMA layer: {str(e)}")
+
+    # ---------------------------------------
+    # Add the roads with custom tooltip and popups
+    # ---------------------------------------  
+    if scenario_data:
+        gdf_4326 = scenario_data[scenario_name]
+        geojson_data = gdf_4326.__geo_interface__
+        def style_callback(feature):
+            return style_function(feature, geojson_data)
+        gjson = folium.GeoJson(
+            gdf_4326,
+            name=scenario_name,
+            style_function=style_callback,
+            tooltip=folium.GeoJsonTooltip(
+                fields=['tooltip'],
+                aliases=[''],
+                sticky=False,
+                labels=False,
+                style="""
+                    background-color: white;
+                    border: 2px solid black;
+                    border-radius: 15px;
+                    box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+                """
+            )
+        )
+        # Add individual popups using our custom popup content function with dataset_info from config.
+        for feature in geojson_data['features']:
+            if feature['properties'] is not None:
+                popup_content = create_popup_content(feature['properties'], config.dataset_info)
+                folium.Popup(popup_content, max_width=300).add_to(
+                    folium.GeoJson(feature, style_function=style_callback)
+                )
+        gjson.add_to(m)
+
 
     # ---------------------------------------
     # Add Legend

@@ -25,7 +25,7 @@ class CoolCorridorsConfig:
 
         # Specific parameters for each analysis type
         citywide_specific = {
-            'number_of_top_roads': 300,
+            'number_of_top_roads': 200,
             'min_segment_length': 1320,  # 1/4 mile
         }
 
@@ -79,7 +79,7 @@ class CoolCorridorsConfig:
                 "description": "Prioritizes very high or very low ratings (Street Pavement Rating, DOT)",
                 "prefix": "",
                 "suffix": "",
-                "hex": "#E2E8F0"
+                "hex": "#AEB6BF"
             },
             "HeatHazIndex": {
                 "alias": "HeatHazIndex",
@@ -87,7 +87,7 @@ class CoolCorridorsConfig:
                 "description": "Priorizizes higher heat hazard areas (daytime summer temperature, Landsat via Google Earth Engine)",
                 "prefix": "",
                 "suffix": "",
-                "hex": "#FDB5B5"
+                "hex": "#E6B0AA"
             },
             "HeatVulnerabilityIndex": {
                 "alias": "HeatVulnerabilityIndex",
@@ -95,7 +95,7 @@ class CoolCorridorsConfig:
                 "description": "Prioritizes higher HVI areas (Heat Vulnerability Index)",
                 "prefix": "",
                 "suffix": "",
-                "hex": "#ebc5a9"
+                "hex": "#F5CBA7"
             },
             "BusDensInx": {
                 "alias": "BusDensInx",
@@ -103,7 +103,7 @@ class CoolCorridorsConfig:
                 "description": "Prioritizes higher density of bus stops",
                 "prefix": "~",
                 "suffix": " Stops per Mile",
-                "hex": "#93C5FD"
+                "hex": "#A9CCE3"
             },
             "BikeLnIndx": {
                 "alias": "BikeLnIndx",
@@ -111,7 +111,7 @@ class CoolCorridorsConfig:
                 "description": "Prioritizes higher bike lane presence (NYC Bike Lanes)",
                 "prefix": "",
                 "suffix": " ft per Mile",
-                "hex": "#BBF7D0"
+                "hex": "#A3E4D7"
             },
             "PedIndex": {
                 "alias": "PedIndex",
@@ -119,7 +119,7 @@ class CoolCorridorsConfig:
                 "description": "Prioritizes higher pedestrian demand rating (Pedestrian Mobility Plan)",
                 "prefix": "",
                 "suffix": "",
-                "hex": "#BFDBFE"
+                "hex": "#AED6F1"
             },
             "pop_dens_indx": {
                 "alias": "pop_dens_indx",
@@ -127,7 +127,7 @@ class CoolCorridorsConfig:
                 "description": "Prioritizes higher population density within 1000 ft (US Census, 2020)",
                 "prefix": "~",
                 "suffix": " People per Sq Mile",
-                "hex": "#DDD6FE"
+                "hex": "#D2B4DE"
             },
             "TreeCanopyIndex": {
                 "alias": "TreeCanopyIndex",
@@ -135,7 +135,7 @@ class CoolCorridorsConfig:
                 "description": "Prioritizes lower tree canopy coverage (LiDAR-based 6in Land Cover, 2021)",
                 "prefix": "",
                 "suffix": " %",
-                "hex": "#bcebc1"
+                "hex": "#A9DFBF"
             },
             "ComIndex": {
                 "alias": "ComIndex",
@@ -143,7 +143,7 @@ class CoolCorridorsConfig:
                 "description": "Prioritizes higher commercial or mixed-use building areas within 1000 ft",
                 "prefix": "~",
                 "suffix": " sq ft",
-                "hex": "#FDE68A"
+                "hex": "#F9E79F"
             },
             "SidewalkIndex": {
                 "alias": "SidewalkIndex",
@@ -151,7 +151,7 @@ class CoolCorridorsConfig:
                 "description": "Prioritizes very wide and very small sidewalks",
                 "prefix": "",
                 "suffix": " sq ft",
-                "hex": "#e7f0b6"
+                "hex": "#E5E7E9"
             },
             "RoadWidthIndex": {
                 "alias": "RoadWidthIndex",
@@ -159,7 +159,7 @@ class CoolCorridorsConfig:
                 "description": "Prioritizes higher-width roads (LION Roads Data)",
                 "prefix": "",
                 "suffix": " ft",
-                "hex": "#94A3B8"
+                "hex": "#CCD1D1"
             } 
         }
 
