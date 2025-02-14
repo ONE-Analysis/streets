@@ -1173,8 +1173,6 @@ class FinalAnalysis:
             all_scenario_roads[f'is_priority_{scenario_name}'] = scenario_results['is_priority']
             results[scenario_name] = scenario_results
 
-        # Also store an 'ALL' scenario (aggregated) if needed
-        results['ALL'] = all_scenario_roads
         return results
 
     @staticmethod

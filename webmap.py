@@ -53,36 +53,84 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
             'opacity': 0.8
         }
     
-    def create_popup_content(properties, dataset_info):
+    def create_popup_content(properties, dataset_info, scenario_weights):
         """
-        Build popup content using dataset_info.
-        For each metric in dataset_info, if properties contains that key,
-        output a line like:
-          [name]: [prefix]{formatted value}[suffix]
-        Also include the street name and priority at the top.
+        Build popup (or tooltip) content using the data dictionary and the active weight scenario.
+        Only include metrics with nonzero weights.
+        
+        Structure:
+          [Street Name]
+          Priority Index: [priority]
+          
+          Input Values:
+            • [name]: [prefix][raw value (2dp)][suffix] ([index value (3dp)])
+              - with [name] in the specified hex color.
+        
+        This version attempts to convert values to floats and falls back if they are missing.
         """
-        header = f"<h4 style='margin-bottom:5px;'>{properties.get('Street', 'Unknown')}</h4>"
-        priority_line = f"<b>Priority Score:</b> {properties.get('priority', 'N/A')}"
-        lines = []
-        for key, info in dataset_info.items():
-            if key in properties:
-                value = properties.get(key)
+        # Header: use the street name and priority
+        street_name = properties.get('Street', 'Unknown')
+        pr = properties.get('priority')
+        try:
+            # Attempt to convert priority to float for proper formatting.
+            priority = f"{float(pr):.3f}" if pr not in (None, '', 'N/A') else 'N/A'
+        except Exception:
+            priority = 'N/A'
+        header = f"<h4 style='margin-bottom:5px;'>{street_name}</h4>"
+        priority_line = f"<strong>Priority Index:</strong> {priority}"
+        
+        # Build the list of input values for each nonzero metric
+        input_lines = ""
+        for key, weight in scenario_weights.items():
+            if weight == 0:
+                continue  # skip metrics with zero weight
+            info = dataset_info.get(key)
+            if not info:
+                continue  # safety check
+            
+            # Retrieve the raw value using the expected field name.
+            raw_field = info.get('raw')
+            raw_val = properties.get(raw_field)
+            # If the raw field is missing, try the metric key itself.
+            if raw_val is None:
+                raw_val = properties.get(key)
+            # Process the raw value.
+            if raw_val in (None, '', 'N/A'):
+                raw_val_disp = 'N/A'
+            else:
                 try:
-                    if isinstance(value, (int, float)):
-                        formatted = f"{value:,.0f}"
-                    else:
-                        formatted = str(value)
+                    raw_val_disp = f"{float(raw_val):.2f}"
                 except Exception:
-                    formatted = str(value)
-                line = f"{info['name']}: {info['prefix']}{formatted}{info['suffix']}"
-                lines.append(line)
-        content = header + "<br>" + priority_line + "<br>" + "<br>".join(lines)
-        return f"<div style='font-family: Helvetica; min-width: 200px; max-width: 300px;'>{content}</div>"
-  
-    def on_each_feature(feature, layer, dataset_info):
-        """Bind a popup using our custom content (from dataset_info)."""
-        popup_content = create_popup_content(feature['properties'], dataset_info)
-        layer.bindPopup(popup_content)    
+                    raw_val_disp = str(raw_val)
+            
+            # Retrieve the index value using the metric key.
+            index_val = properties.get(key)
+            # If missing, fall back to the raw value (if available).
+            if index_val is None:
+                index_val = raw_val
+            if index_val in (None, '', 'N/A'):
+                index_val_disp = 'N/A'
+            else:
+                try:
+                    index_val_disp = f"{float(index_val):.3f}"
+                except Exception:
+                    index_val_disp = str(index_val)
+            
+            # Build the line with the metric name in its hex color.
+            colored_name = f"<span style='color: {info.get('hex')}; font-weight:bold;'>{info.get('name')}</span>"
+            line = f"{colored_name}: {info.get('prefix','')}{raw_val_disp}{info.get('suffix','')} ({index_val_disp})"
+            input_lines += f"<li style='margin-bottom:2px;'>{line}</li>"
+        
+        # Wrap the input values in a list.
+        input_values = f"<strong>Input Values:</strong><ul style='margin: 0; padding-left:15px;'>{input_lines}</ul>"
+        
+        # Combine everything into one HTML snippet.
+        popup_html = f"<div style='font-family: Helvetica;'>{header}<p>{priority_line}</p><p>{input_values}</p></div>"
+        return popup_html
+
+    def bind_popup_to_feature(feature, layer, dataset_info, scenario_weights):
+        popup_content = create_popup_content(feature['properties'], dataset_info, scenario_weights)
+        layer.bindPopup(popup_content)
     
     # Process neighborhoods (if available)
     bounds_list = []
@@ -167,7 +215,7 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
     analysis_text_html = f'''
     <div style="
         position: fixed;
-        top: 110px;  
+        bottom: 30px;  
         left: 30px;
         z-index: 1000;
         background-color: white;
@@ -286,13 +334,32 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
         print(f"Warning: Could not fetch FEMA layer: {str(e)}")
 
     # ---------------------------------------
-    # Add the roads with custom tooltip and popups
-    # ---------------------------------------  
+    # Add the roads with custom tooltip (using the popup content as tooltip)
+    # ---------------------------------------
     if scenario_data:
-        gdf_4326 = scenario_data[scenario_name]
+        # Get a copy of the GeoDataFrame for the active scenario.
+        gdf_4326 = scenario_data[scenario_name].copy()
+
+        # Compute tooltip content for each feature using your custom function.
+        # This uses the properties from each row, the dataset_info from config,
+        # and the active scenario_weights.
+        def compute_tooltip(row):
+            props = row.to_dict()
+            # Remove geometry to avoid serialization issues.
+            props.pop('geometry', None)
+            return create_popup_content(props, config.dataset_info, scenario_weights)
+        
+        # Create a new column "tooltip" with the formatted HTML.
+        gdf_4326['tooltip'] = gdf_4326.apply(compute_tooltip, axis=1)
+
+        # Get the GeoJSON representation for use in the style function.
         geojson_data = gdf_4326.__geo_interface__
+
+        # Define the style callback as before (using your original style_function).
         def style_callback(feature):
             return style_function(feature, geojson_data)
+
+        # Create the GeoJson layer with the custom tooltip.
         gjson = folium.GeoJson(
             gdf_4326,
             name=scenario_name,
@@ -302,6 +369,7 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
                 aliases=[''],
                 sticky=False,
                 labels=False,
+                parse_html=True,  # Ensure HTML in tooltip is rendered
                 style="""
                     background-color: white;
                     border: 2px solid black;
@@ -310,13 +378,6 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
                 """
             )
         )
-        # Add individual popups using our custom popup content function with dataset_info from config.
-        for feature in geojson_data['features']:
-            if feature['properties'] is not None:
-                popup_content = create_popup_content(feature['properties'], config.dataset_info)
-                folium.Popup(popup_content, max_width=300).add_to(
-                    folium.GeoJson(feature, style_function=style_callback)
-                )
         gjson.add_to(m)
 
 
@@ -383,36 +444,29 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
     m.get_root().html.add_child(legend)
 
     # ---------------------------------------
-    # --- Donut Chart Overlay ---
+    # --- Donut Chart Overlay with Interactive Info Icons in Legend ---
     # ---------------------------------------    
     # Only include keys with nonzero weight from scenario_weights, using dataset_info for labels and hex.
     active_items = [(k, v) for k, v in scenario_weights.items() if v != 0 and k in config.dataset_info]
     if active_items:
         sizes = [v for k, v in active_items]
-        labels = [config.dataset_info[k]['name'] for k, v in active_items]
         colors = [config.dataset_info[k]['hex'] for k, v in active_items]
-        import matplotlib.pyplot as plt  # Ensure matplotlib is imported here if not already
-        fig, ax = plt.subplots(figsize=(4.5, 4.5), dpi=90)
+        
+        import matplotlib.pyplot as plt
+        fig, ax = plt.subplots(figsize=(3, 3), dpi=90)
         wedges, texts, autotexts = ax.pie(
              sizes,
              labels=None,
              autopct=lambda pct: f"{int(round(pct))}%",
-             pctdistance=0.8,
+             pctdistance=0.75,
              startangle=90,
              wedgeprops={'width': 0.5, 'edgecolor': 'white'},
              colors=colors
         )
         ax.set_aspect("equal")
-        plt.setp(autotexts, size=10, fontfamily='Helvetica', weight='bold', color='black', va='center')
-        ax.legend(
-             wedges,
-             labels,
-             loc="upper center",
-             bbox_to_anchor=(0.5, -0.1),
-             ncol=1,
-             fontsize=9
-        )
+        plt.setp(autotexts, size=12, fontfamily='Helvetica', weight='bold', color='black', va='center', ha='center')
         plt.tight_layout()
+        
         import io
         svg_buf = io.BytesIO()
         plt.savefig(svg_buf, format='svg', transparent=True, bbox_inches='tight')
@@ -420,13 +474,87 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
         svg_data = svg_buf.read().decode('utf-8')
         svg_buf.close()
         plt.close(fig)
+        
+        # Build a custom HTML legend with interactive info icons and tooltips
+        legend_html = '<div style="margin-top:10px;">'
+        for k, v in active_items:
+            info = config.dataset_info[k]
+            label = info['name']
+            description = info.get('description', 'No description available.')
+            raw_value = info.get('raw', '')
+            prefix = info.get('prefix', '')
+            suffix = info.get('suffix', '')
+            
+            # Create tooltip content with additional info
+            tooltip_content = f"""
+                <div class='tooltip-content'>
+                    <strong>{label}</strong><br>
+                    {description}
+                </div>
+            """
+            
+            # Create legend item with enhanced tooltip
+            legend_html += f"""
+                <div class="legend-item" style="font-size:12pt; color:{info['hex']}; margin-bottom:10px; margin-left:30px; display:flex; align-items:center;">
+                    <div class="tooltip-container">
+                        <span class="info-icon" style="cursor:pointer; margin-right:5px; font-size:12pt;">&#9432;</span>
+                        <div class="tooltip">{tooltip_content}</div>
+                    </div>
+                    <span>{label}</span>
+                </div>
+            """
+        legend_html += '</div>'
+        
+        # CSS for tooltips
+        tooltip_css = """
+            <style>
+                .tooltip-container {
+                    position: relative;
+                    display: inline-block;
+                }
+                .tooltip {
+                    visibility: hidden;
+                    position: absolute;
+                    left: 25px;
+                    background-color: white;
+                    color: #333;
+                    padding: 10px;
+                    border-radius: 20px;
+                    font-size: 8pt;
+                    width: 200px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                    border: 1px solid #ddd;
+                    z-index: 1001;
+                    opacity: 0;
+                    transition: opacity 0.3s;
+                }
+                .tooltip-content {
+                    line-height: 1.4;
+                }
+                .tooltip-container:hover .tooltip {
+                    visibility: visible;
+                    opacity: 1;
+                }
+                .legend-item {
+                    position: relative;
+                    white-space: nowrap;
+                }
+                .info-icon {
+                    color: inherit;
+                    font-weight: bold;
+                }
+            </style>
+        """
+        
+        # Combine the donut chart SVG with the custom legend and CSS
+        donut_combined = tooltip_css + svg_data + legend_html
     else:
-        svg_data = "<svg></svg>"
+        donut_combined = "<svg></svg>"
 
     donut_html = f'''
     <div style="
         position: fixed;
-        bottom: 30px;
+        top: 110px;
         left: 30px;
         z-index: 1000;
         background: white;
@@ -436,10 +564,10 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
         box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
         font-family: 'Helvetica', sans-serif;
     ">
-        <h4 style="margin-top: 0; margin-bottom: 8px; font-weight: bold; font-size: 20px; text-align: center;">
+        <h4 style="margin-top: 0; margin-bottom: 0; font-weight: bold; font-size: 25px; text-align: center;">
             Analysis Weights
         </h4>
-        {svg_data}
+        {donut_combined}
     </div>
     '''
     m.get_root().html.add_child(folium.Element(donut_html))

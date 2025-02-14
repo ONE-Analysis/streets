@@ -25,7 +25,7 @@ class CoolCorridorsConfig:
 
         # Specific parameters for each analysis type
         citywide_specific = {
-            'number_of_top_roads': 200,
+            'number_of_top_roads': 100,
             'min_segment_length': 1320,  # 1/4 mile
         }
 
@@ -47,12 +47,12 @@ class CoolCorridorsConfig:
                 'PavementIndex': 0,
                 'HeatHazIndex': 0,
                 'HeatVulnerabilityIndex': 0,
-                'BusDensInx': 0,
+                'BusDensInx': 0.1,
                 'BikeLnIndx': 0,
                 'PedIndex': 0.1,
-                'pop_dens_indx': 0.2,
+                'pop_dens_indx': 0.15,
                 'TreeCanopyIndex': 0.3,
-                'ComIndex': 0.2,
+                'ComIndex': 0.15,
                 'SidewalkIndex': 0.1,
                 'RoadWidthIndex': 0.1
             },
@@ -75,91 +75,102 @@ class CoolCorridorsConfig:
         self.dataset_info = {
             "PavementIndex": {
                 "alias": "PavementIndex",
-                "name": "Pavement",
+                "raw": "pav_rate",
+                "name": "Pavement Rating",
                 "description": "Prioritizes very high or very low ratings (Street Pavement Rating, DOT)",
                 "prefix": "",
                 "suffix": "",
-                "hex": "#AEB6BF"
+                "hex": "#F4D03F"
             },
             "HeatHazIndex": {
                 "alias": "HeatHazIndex",
+                "raw": "Heat_Mean",
                 "name": "Heat Hazard",
                 "description": "Priorizizes higher heat hazard areas (daytime summer temperature, Landsat via Google Earth Engine)",
                 "prefix": "",
                 "suffix": "",
-                "hex": "#E6B0AA"
+                "hex": "#CD6155"
             },
             "HeatVulnerabilityIndex": {
                 "alias": "HeatVulnerabilityIndex",
+                "raw": "hvi_raw",
                 "name": "Heat Vulnerability",
                 "description": "Prioritizes higher HVI areas (Heat Vulnerability Index)",
                 "prefix": "",
                 "suffix": "",
-                "hex": "#F5CBA7"
+                "hex": "#DC7633"
             },
             "BusDensInx": {
                 "alias": "BusDensInx",
+                "raw": "BusStpDens",
                 "name": "Bus Stop Density",
                 "description": "Prioritizes higher density of bus stops",
                 "prefix": "~",
                 "suffix": " Stops per Mile",
-                "hex": "#A9CCE3"
+                "hex": "#5499C7"
             },
             "BikeLnIndx": {
                 "alias": "BikeLnIndx",
+                "raw": "bike_length",
                 "name": "Bike Lane Density",
                 "description": "Prioritizes higher bike lane presence (NYC Bike Lanes)",
-                "prefix": "",
+                "prefix": "~",
                 "suffix": " ft per Mile",
-                "hex": "#A3E4D7"
+                "hex": "#48C9B0"
             },
             "PedIndex": {
                 "alias": "PedIndex",
+                "raw": "PedRank",
                 "name": "Pedestrian Demand",
                 "description": "Prioritizes higher pedestrian demand rating (Pedestrian Mobility Plan)",
                 "prefix": "",
                 "suffix": "",
-                "hex": "#AED6F1"
+                "hex": "#5DADE2"
             },
             "pop_dens_indx": {
                 "alias": "pop_dens_indx",
+                "raw": "pop_density",
                 "name": "Population Density",
                 "description": "Prioritizes higher population density within 1000 ft (US Census, 2020)",
                 "prefix": "~",
                 "suffix": " People per Sq Mile",
-                "hex": "#D2B4DE"
+                "hex": "#A569BD"
             },
             "TreeCanopyIndex": {
                 "alias": "TreeCanopyIndex",
+                "raw": "tree_pct",
                 "name": "Tree Canopy Gap",
                 "description": "Prioritizes lower tree canopy coverage (LiDAR-based 6in Land Cover, 2021)",
-                "prefix": "",
-                "suffix": " %",
-                "hex": "#A9DFBF"
+                "prefix": "~",
+                "suffix": " % roadway canopy coverage",
+                "hex": "#52BE80"
             },
             "ComIndex": {
                 "alias": "ComIndex",
+                "raw": "ComArea",
                 "name": "Commercial Activity",
                 "description": "Prioritizes higher commercial or mixed-use building areas within 1000 ft",
                 "prefix": "~",
                 "suffix": " sq ft",
-                "hex": "#F9E79F"
+                "hex": "#F5B041"
             },
             "SidewalkIndex": {
                 "alias": "SidewalkIndex",
+                "raw": "sidewalk_area",
                 "name": "Sidewalk Availability",
                 "description": "Prioritizes very wide and very small sidewalks",
-                "prefix": "",
+                "prefix": "~",
                 "suffix": " sq ft",
-                "hex": "#E5E7E9"
+                "hex": "#95A5A6"
             },
             "RoadWidthIndex": {
                 "alias": "RoadWidthIndex",
+                "raw": "StreetWidth_Min",
                 "name": "Road Width",
                 "description": "Prioritizes higher-width roads (LION Roads Data)",
                 "prefix": "",
                 "suffix": " ft",
-                "hex": "#CCD1D1"
+                "hex": "#566573"
             } 
         }
 
