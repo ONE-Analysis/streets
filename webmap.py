@@ -298,6 +298,26 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
         except Exception as e:
             print(f"Warning: Could not process nyzma file: {str(e)}")
 
+    # Add Unplantable Roads Layer
+    unplantable_path = os.path.join(config.input_dir, 'roads_unplantable_DPR.geojson')
+    if os.path.exists(unplantable_path):
+        try:
+            unplantable = gpd.read_file(unplantable_path)
+            if unplantable.crs is None or unplantable.crs != "EPSG:4326":
+                unplantable = unplantable.to_crs("EPSG:4326")
+            folium.GeoJson(
+                unplantable,
+                name="Zoning Map Adjustments (2020-Present)",
+                style_function=lambda x: {
+                    'color': 'green',
+                    'weight': 5,
+                    'opacity': 0.4
+                }
+            ).add_to(m)
+        except Exception as e:
+            print(f"Warning: Could not process unplantable file: {str(e)}")
+
+
     # Add neighborhoods layer
     if neighborhoods_4326 is not None and not neighborhoods_4326.empty:
         folium.GeoJson(
@@ -416,23 +436,27 @@ def build_webmap(scenario_geojsons, config, neighborhood_name=None):
                 <h5 style="margin: 5px 0;">Area Overlays</h5>
                 <div style="display: flex; flex-direction: column; gap: 5px;">
                     <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background: gray; opacity: 0.2; border: 1px solid gray;"></div>
+                        <div style="width: 20px; height: 20px; background: rgba(128, 128, 128, 0.2); border: 2px solid gray; border-radius: 3px;"></div>
                         <span>CSC Neighborhoods</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background: green; opacity: 0.2; border: 1px solid green;"></div>
+                        <div style="width: 20px; height: 5px; background: green; opacity: 0.4; border: 1px solid green;"></div>
+                        <span>Unplantable Corridors (DPR)</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <div style="width: 20px; height: 20px;background: rgba(0, 128, 0, 0.2); border: 1px solid green; border-radius: 3px;"></div>
                         <span>Persistent Poverty Areas</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background: blue; opacity: 0.2; border: 1px solid blue;"></div>
+                        <div style="width: 20px; height: 20px; background: rgba(0, 0, 255, 0.2); border: 1px solid blue; border-radius: 3px;"></div>
                         <span>Federal Opportunity Zones</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background: cyan; opacity: 0.2; border: 1px solid cyan;"></div>
+                        <div style="width: 20px; height: 20px; background: rgba(0, 255, 255, 0.2); border: 1px solid cyan; border-radius: 3px;"></div>
                         <span>NYZMA (2020-Present)</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 5px;">
-                        <div style="width: 20px; height: 20px; background: purple; opacity: 0.2; border: 1px solid purple;"></div>
+                        <div style="width: 20px; height: 20px; background: rgba(128, 0, 128, 0.2); border: 1px solid purple; border-radius: 3px;"></div>
                         <span>FEMA CDRZ</span>
                     </div>
                 </div>

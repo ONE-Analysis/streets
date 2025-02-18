@@ -25,7 +25,7 @@ class CoolCorridorsConfig:
 
         # Specific parameters for each analysis type
         citywide_specific = {
-            'number_of_top_roads': 100,
+            'number_of_top_roads': 200,
             'min_segment_length': 1320,  # 1/4 mile
         }
 
@@ -86,7 +86,7 @@ class CoolCorridorsConfig:
                 "alias": "HeatHazIndex",
                 "raw": "Heat_Mean",
                 "name": "Heat Hazard",
-                "description": "Priorizizes higher heat hazard areas (daytime summer temperature, Landsat via Google Earth Engine)",
+                "description": "Prioritizes higher heat hazard areas (daytime summer temperature, Landsat via Google Earth Engine)",
                 "prefix": "",
                 "suffix": "",
                 "hex": "#CD6155"
