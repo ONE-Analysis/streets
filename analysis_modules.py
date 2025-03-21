@@ -1373,14 +1373,6 @@ def run_neighborhood_analysis(config):
         buffer_ft = 1000  # fallback
     roads = process_commercial_area(roads, config.input_dir, buffer_ft)
 
-    # 2C) (Optional) Citywide ComIndex, but we will re-min-max at the neighborhood level,
-    # so this step is not strictly necessary:
-    #   roads['ComIndex'] = ...
-    #   roads['heat_indx'] = ...
-    # etc. 
-    # We'll do a citywide pass if you want to see global distributions, 
-    # but final min-max will happen per neighborhood.
-
     # 2D) Temperature
     temp_raster_path = os.path.join(config.input_dir, 'Landsat9_ThermalComposite_ST_B10_2020-2023.tif')
     roads = raster_processor.optimize_temperature_processing(roads, temp_raster_path)
